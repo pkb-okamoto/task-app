@@ -22,15 +22,16 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createTask, updateTask, setTaskAssignees } from "@/lib/actions/tasks";
-import { type GroupStatus, type Priority, type Task, type User } from "@/lib/types";
+import { type Group, type Priority, type Task, type User } from "@/lib/types";
 
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: Task | null;           // nullなら新規作成モード
-  defaultStatus?: GroupStatus;  // 新規作成時のデフォルトステータス
-  parentTaskId?: string | null; // サブタスク追加時の親ID
-  users: User[];                // 担当者候補一覧
+  task?: Task | null;
+  defaultGroupId?: string | null;
+  parentTaskId?: string | null;
+  users: User[];
+  groups: Group[];
 }
 
 // タスク作成・編集ダイアログ
@@ -38,27 +39,26 @@ export default function TaskDialog({
   open,
   onOpenChange,
   task,
-  defaultStatus = "未着手",
+  defaultGroupId = null,
   parentTaskId = null,
   users,
+  groups,
 }: TaskDialogProps) {
   const isEdit = !!task;
   const [isPending, startTransition] = useTransition();
 
-  // フォーム状態
   const [title, setTitle] = useState("");
-  const [status, setStatus] = useState<GroupStatus>(defaultStatus);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [progress, setProgress] = useState(0);
   const [notes, setNotes] = useState("");
   const [priority, setPriority] = useState<Priority>("中");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
-  // 編集時は既存データをフォームに反映
   useEffect(() => {
     if (task) {
       setTitle(task.title);
-      setStatus(task.group_status);
+      setGroupId(task.group_id ?? null);
       setDueDate(task.due_date ?? "");
       setProgress(task.progress);
       setNotes(task.notes ?? "");
@@ -66,32 +66,31 @@ export default function TaskDialog({
       setSelectedUserIds(task.assignees?.map((u) => u.id) ?? []);
     } else {
       setTitle("");
-      setStatus(defaultStatus);
+      setGroupId(defaultGroupId ?? groups[0]?.id ?? null);
       setDueDate("");
       setProgress(0);
       setNotes("");
       setPriority("中");
       setSelectedUserIds([]);
     }
-  }, [task, defaultStatus, open]);
+  }, [task, defaultGroupId, groups, open]);
 
-  // 担当者のチェック切り替え
   const toggleUser = (userId: string) => {
     setSelectedUserIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   };
 
-  // 保存処理
   const handleSave = () => {
     if (!title.trim()) return;
+    const selectedGroup = groups.find((g) => g.id === groupId);
 
     startTransition(async () => {
       if (isEdit && task) {
-        // 更新
         await updateTask(task.id, {
           title: title.trim(),
-          group_status: status,
+          group_id: groupId,
+          group_status: selectedGroup?.name ?? "",
           due_date: dueDate || null,
           progress,
           notes: notes.trim() || null,
@@ -99,10 +98,10 @@ export default function TaskDialog({
         });
         await setTaskAssignees(task.id, selectedUserIds);
       } else {
-        // 新規作成（IDを取得するためinsert後にselectが必要だが、簡略化のため担当者は別途対応）
         await createTask({
           title: title.trim(),
-          group_status: status,
+          group_id: groupId,
+          group_status: selectedGroup?.name ?? "",
           due_date: dueDate || null,
           progress,
           notes: notes.trim() || null,
@@ -135,17 +134,19 @@ export default function TaskDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* ステータス */}
+            {/* グループ */}
             <div className="grid gap-1.5">
-              <Label>ステータス</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as GroupStatus)}>
+              <Label>グループ</Label>
+              <Select value={groupId ?? ""} onValueChange={(v) => setGroupId(v || null)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {groups.find((g) => g.id === groupId)?.name ?? "グループを選択"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="未着手">未着手</SelectItem>
-                  <SelectItem value="進行中">進行中</SelectItem>
-                  <SelectItem value="完了">完了</SelectItem>
+                  {groups.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -207,8 +208,8 @@ export default function TaskDialog({
             />
           </div>
 
-          {/* 担当者（編集時のみ） */}
-          {isEdit && users.length > 0 && (
+          {/* 担当者 */}
+          {users.length > 0 && (
             <div className="grid gap-1.5">
               <Label>担当者</Label>
               <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto">

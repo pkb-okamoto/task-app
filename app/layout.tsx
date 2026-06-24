@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="ja" className={`${geistSans.variable} h-full antialiased`} style={{ fontSize: "18px" }} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-gray-50" suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
       </body>

@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PriorityBadge, StatusBadge } from "@/components/TaskBadges";
+import { PriorityBadge } from "@/components/TaskBadges";
 import { type Task } from "@/lib/types";
 
 interface TaskRowProps {
@@ -118,7 +118,7 @@ export default function TaskRow({
 
         {/* ステータス */}
         <td className="py-2 px-3">
-          <StatusBadge status={task.group_status} />
+          <span className="text-xs text-gray-600">{task.group_status}</span>
         </td>
 
         {/* 進捗率 */}

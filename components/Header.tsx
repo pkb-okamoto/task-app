@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronDown, LayoutDashboard, LogOut, Settings, User } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, Settings, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationPopover from "@/components/NotificationPopover";
 import { signOut } from "@/lib/actions/auth";
 import { type User as UserType } from "@/lib/types";
 
@@ -39,11 +40,8 @@ export default function Header({ currentUser }: HeaderProps) {
       {/* スペーサー */}
       <div className="flex-1" />
 
-      {/* 通知ボタン */}
-      <Button variant="ghost" size="icon" className="relative text-gray-500">
-        <Bell className="h-5 w-5" />
-        <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
-      </Button>
+      {/* 通知ポップオーバー */}
+      <NotificationPopover currentUser={currentUser} />
 
       {/* ユーザーメニュー */}
       <DropdownMenu>

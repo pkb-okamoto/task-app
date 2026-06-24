@@ -1,52 +1,90 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ChevronDown, MoreHorizontal, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import TaskRow from "@/components/TaskRow";
-import { type Task, type GroupStatus } from "@/lib/types";
+import { groupColorStyles } from "@/components/TaskBadges";
+import { deleteGroup } from "@/lib/actions/groups";
+import { type Group, type Task } from "@/lib/types";
 
 interface TaskGroupProps {
-  status: GroupStatus;
+  group: Group;
   tasks: Task[];
-  onAddTask: (status: GroupStatus) => void;
+  onAddTask: (groupId: string) => void;
   onAddSubtask: (parentId: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onEditGroup: (group: Group) => void;
 }
 
-// ステータスごとのグループヘッダー色
-const groupColors: Record<GroupStatus, { dot: string; text: string; bg: string }> = {
-  未着手: { dot: "bg-gray-400",  text: "text-gray-700",  bg: "bg-gray-50"  },
-  進行中: { dot: "bg-blue-500",  text: "text-blue-700",  bg: "bg-blue-50"  },
-  完了:   { dot: "bg-green-500", text: "text-green-700", bg: "bg-green-50" },
-};
-
-// タスクグループ（ステータスごとのセクション）
+// タスクグループ（グループごとのセクション）
 export default function TaskGroup({
-  status,
+  group,
   tasks,
   onAddTask,
   onAddSubtask,
   onEdit,
   onDelete,
+  onEditGroup,
 }: TaskGroupProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const color = groupColors[status];
+  const [isPending, startTransition] = useTransition();
+  const color = groupColorStyles[group.color] ?? groupColorStyles.gray;
+
+  const handleDeleteGroup = () => {
+    if (!confirm(`「${group.name}」を削除しますか？\nこのグループのタスクはグループなしになります。`)) return;
+    startTransition(async () => {
+      await deleteGroup(group.id);
+    });
+  };
 
   return (
     <div className="mb-6">
       {/* グループヘッダー */}
-      <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer select-none ${color.bg}`}
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        <ChevronDown
-          className={`h-4 w-4 ${color.text} transition-transform ${collapsed ? "-rotate-90" : ""}`}
-        />
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-t-lg ${color.bg}`}>
+        {/* 折りたたみボタン */}
+        <button onClick={() => setCollapsed(!collapsed)}>
+          <ChevronDown
+            className={`h-4 w-4 ${color.text} transition-transform ${collapsed ? "-rotate-90" : ""}`}
+          />
+        </button>
+
         <span className={`h-2.5 w-2.5 rounded-full ${color.dot}`} />
-        <span className={`text-sm font-semibold ${color.text}`}>{status}</span>
+        <span className={`text-sm font-semibold ${color.text} flex-1 cursor-pointer select-none`}
+          onClick={() => setCollapsed(!collapsed)}>
+          {group.name}
+        </span>
         <span className={`text-xs ${color.text} opacity-70`}>{tasks.length}件</span>
+
+        {/* グループ操作メニュー */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className={`p-1 rounded hover:bg-black/5 outline-none ${color.text}`}>
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="gap-2" onClick={() => onEditGroup(group)}>
+              <Pencil className="h-4 w-4" />
+              グループを編集
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2 text-red-600"
+              onClick={handleDeleteGroup}
+              disabled={isPending}
+            >
+              <Trash2 className="h-4 w-4" />
+              グループを削除
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* タスクテーブル */}
@@ -101,7 +139,7 @@ export default function TaskGroup({
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-gray-500 hover:text-gray-700 rounded-none h-9"
-              onClick={() => onAddTask(status)}
+              onClick={() => onAddTask(group.id)}
             >
               <Plus className="h-3.5 w-3.5" />
               <span className="text-sm">タスクを追加</span>
