@@ -234,7 +234,7 @@ export default function TaskDialog({
               <Label>時刻</Label>
               <Select
                 value={dueTime || "none"}
-                onValueChange={(v) => setDueTime(v === "none" ? "" : v)}
+                onValueChange={(v) => setDueTime(v === "none" ? "" : (v ?? ""))}
                 disabled={!dueDate}
               >
                 <SelectTrigger>
