@@ -62,8 +62,9 @@ function buildTaskTree(rows: RawTask[]): Task[] {
   return roots;
 }
 
-type RawTask = Omit<Task, "assignees" | "subtasks"> & {
+type RawTask = Omit<Task, "assignees" | "subtasks" | "attachment_count"> & {
   assignees: { user: { id: string; name: string; avatar_url: string | null } }[];
+  attachments?: { count: number }[] | null;
 };
 
 // ============================================================

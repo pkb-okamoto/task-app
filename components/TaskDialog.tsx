@@ -257,7 +257,7 @@ export default function TaskDialog({
                 <Bell className="h-3.5 w-3.5 text-gray-500" />
                 アラート
               </Label>
-              <Select value={alertDays} onValueChange={setAlertDays}>
+              <Select value={alertDays} onValueChange={(v) => setAlertDays(v ?? "none")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
