@@ -5,34 +5,40 @@ import { createClient } from "@/lib/supabase/server";
 import { type Group, type GroupColor } from "@/lib/types";
 
 // グループ一覧取得（position順）
-export async function getGroups(): Promise<Group[]> {
+export async function getGroups(workspaceId?: string | null): Promise<Group[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("groups")
-    .select("*")
-    .order("position", { ascending: true });
+  let query = supabase.from("groups").select("*").order("position", { ascending: true });
+
+  if (workspaceId) {
+    query = query.eq("workspace_id", workspaceId);
+  } else {
+    query = query.is("workspace_id", null);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
 }
 
 // グループ作成
-export async function createGroup(input: { name: string; color: GroupColor }) {
+export async function createGroup(input: { name: string; color: GroupColor; workspace_id?: string | null }) {
   const supabase = await createClient();
 
-  // 現在の最大positionを取得して末尾に追加
-  const { data: last } = await supabase
-    .from("groups")
-    .select("position")
-    .order("position", { ascending: false })
-    .limit(1)
-    .single();
+  let posQuery = supabase.from("groups").select("position").order("position", { ascending: false }).limit(1);
+  if (input.workspace_id) {
+    posQuery = posQuery.eq("workspace_id", input.workspace_id);
+  } else {
+    posQuery = posQuery.is("workspace_id", null);
+  }
 
+  const { data: last } = await posQuery.single();
   const position = (last?.position ?? -1) + 1;
 
   const { error } = await supabase.from("groups").insert({
     name: input.name,
     color: input.color,
     position,
+    workspace_id: input.workspace_id ?? null,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/");

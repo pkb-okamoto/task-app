@@ -3,23 +3,35 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { type Priority, type Task } from "@/lib/types";
+import { upsertCalendarEvent, deleteCalendarEvent } from "@/lib/google-calendar";
+import { createMentionNotifications } from "@/lib/actions/notifications";
+import { getUsers } from "@/lib/actions/users";
 
 // ============================================================
 // タスク一覧取得（担当者・サブタスク込み）
 // ============================================================
-export async function getTasks(): Promise<Task[]> {
+export async function getTasks(workspaceId?: string | null): Promise<Task[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select(`
       *,
       assignees:task_assignees(
         user:users(id, name, avatar_url)
-      )
+      ),
+      attachments:task_attachments(count)
     `)
+    .order("position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
+  if (workspaceId) {
+    query = query.eq("workspace_id", workspaceId);
+  } else {
+    query = query.is("workspace_id", null);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return buildTaskTree(data ?? []);
 }
@@ -32,6 +44,7 @@ function buildTaskTree(rows: RawTask[]): Task[] {
     map.set(row.id, {
       ...row,
       assignees: row.assignees?.map((a: { user: { id: string; name: string; avatar_url: string | null } }) => a.user) ?? [],
+      attachment_count: (row.attachments as { count: number }[] | null)?.[0]?.count ?? 0,
       subtasks: [],
     });
   });
@@ -61,26 +74,54 @@ export async function createTask(input: {
   group_id?: string | null;
   group_status?: string;
   due_date?: string | null;
+  due_time?: string | null;
   progress?: number;
   notes?: string | null;
   priority?: Priority;
+  alert_days?: number | null;
   parent_task_id?: string | null;
+  workspace_id?: string | null;
 }) {
   const supabase = await createClient();
 
-  const { error } = await supabase.from("tasks").insert({
+  const { data: newTask, error } = await supabase.from("tasks").insert({
     title: input.title,
     group_id: input.group_id ?? null,
     group_status: input.group_status ?? "未着手",
     due_date: input.due_date ?? null,
+    due_time: input.due_time ?? null,
     progress: input.progress ?? 0,
     notes: input.notes ?? null,
     priority: input.priority ?? "中",
+    alert_days: input.alert_days ?? null,
     parent_task_id: input.parent_task_id ?? null,
-  });
+    workspace_id: input.workspace_id ?? null,
+  }).select("id").single();
 
   if (error) throw new Error(error.message);
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 期限が設定されている場合はGoogleカレンダーに同期
+  if (input.due_date && newTask && user) {
+    await upsertCalendarEvent(user.id, { id: newTask.id, title: input.title, due_date: input.due_date, due_time: input.due_time ?? null, notes: input.notes }).catch(() => {});
+  }
+
+  // 備考のメンション通知
+  if (newTask && input.notes && user) {
+    const allUsers = await getUsers();
+    await createMentionNotifications({
+      taskId: newTask.id,
+      taskTitle: input.title,
+      newNotes: input.notes,
+      prevNotes: "",
+      allUsers,
+      mentionedByUserId: user.id,
+    }).catch((e) => console.error("[通知] createTask mention失敗:", e?.message));
+  }
+
   revalidatePath("/");
+  return newTask?.id ?? null;
 }
 
 // ============================================================
@@ -93,14 +134,53 @@ export async function updateTask(
     group_id: string | null;
     group_status: string;
     due_date: string | null;
+    due_time: string | null;
     progress: number;
     notes: string | null;
     priority: Priority;
+    alert_days: number | null;
   }>
 ) {
   const supabase = await createClient();
+
+  // メンション検知のために更新前の備考を取得
+  let prevNotes = "";
+  if ("notes" in input) {
+    const { data: prev } = await supabase.from("tasks").select("notes, title").eq("id", taskId).single();
+    prevNotes = prev?.notes ?? "";
+  }
+
   const { error } = await supabase.from("tasks").update(input).eq("id", taskId);
   if (error) throw new Error(error.message);
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 期限が変更された場合はGoogleカレンダーに同期
+  if ("due_date" in input && user) {
+    if (input.due_date) {
+      const { data: task } = await supabase.from("tasks").select("id, title, notes").eq("id", taskId).single();
+      if (task) {
+        await upsertCalendarEvent(user.id, { id: task.id, title: task.title, due_date: input.due_date, due_time: input.due_time ?? null, notes: task.notes }).catch((e) => console.error("[Calendar] upsert失敗:", e?.message));
+      }
+    } else {
+      await deleteCalendarEvent(user.id, taskId).catch(() => {});
+    }
+  }
+
+  // 備考のメンション通知
+  if ("notes" in input && input.notes && user) {
+    const { data: taskData } = await supabase.from("tasks").select("title").eq("id", taskId).single();
+    const allUsers = await getUsers();
+    await createMentionNotifications({
+      taskId,
+      taskTitle: taskData?.title ?? input.title ?? "",
+      newNotes: input.notes,
+      prevNotes,
+      allUsers,
+      mentionedByUserId: user.id,
+    }).catch((e) => console.error("[通知] updateTask mention失敗:", e?.message));
+  }
+
   revalidatePath("/");
 }
 
@@ -109,8 +189,74 @@ export async function updateTask(
 // ============================================================
 export async function deleteTask(taskId: string) {
   const supabase = await createClient();
+
+  // Googleカレンダーのイベントも削除
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await deleteCalendarEvent(user.id, taskId).catch(() => {});
+  }
+
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) throw new Error(error.message);
+  revalidatePath("/");
+}
+
+// ============================================================
+// タスクのコピー
+// ============================================================
+export async function duplicateTask(taskId: string) {
+  const supabase = await createClient();
+
+  const { data: src, error } = await supabase
+    .from("tasks")
+    .select("*, task_assignees(user_id)")
+    .eq("id", taskId)
+    .single();
+
+  if (error || !src) throw new Error(error?.message ?? "タスクが見つかりません");
+
+  const { data: newTask, error: insertError } = await supabase
+    .from("tasks")
+    .insert({
+      title: `${src.title} (コピー)`,
+      group_id: src.group_id,
+      group_status: src.group_status,
+      progress: src.progress,
+      notes: src.notes,
+      priority: src.priority,
+      parent_task_id: src.parent_task_id,
+      workspace_id: src.workspace_id,
+      due_date: null,
+      due_time: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !newTask) throw new Error(insertError?.message ?? "コピー失敗");
+
+  // 担当者もコピー
+  const assignees = (src.task_assignees as { user_id: string }[]) ?? [];
+  if (assignees.length > 0) {
+    await supabase.from("task_assignees").insert(
+      assignees.map((a) => ({ task_id: newTask.id, user_id: a.user_id }))
+    );
+  }
+
+  revalidatePath("/");
+}
+
+// ============================================================
+// タスクの並び順を一括更新
+// ============================================================
+export async function updateTaskPositions(
+  updates: { id: string; position: number; group_id: string | null; group_status: string }[]
+) {
+  const supabase = await createClient();
+  await Promise.all(
+    updates.map(({ id, position, group_id, group_status }) =>
+      supabase.from("tasks").update({ position, group_id, group_status }).eq("id", id)
+    )
+  );
   revalidatePath("/");
 }
 

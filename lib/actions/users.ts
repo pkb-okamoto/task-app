@@ -11,7 +11,7 @@ export async function getUsers(): Promise<User[]> {
 
   const { data, error } = await supabase
     .from("users")
-    .select("id, name, avatar_url")
+    .select("id, name, avatar_url, color")
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);

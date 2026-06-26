@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deleteTask } from "@/lib/actions/tasks";
+import { useWorkspace } from "@/lib/workspace-context";
 
 interface DeleteDialogProps {
   open: boolean;
@@ -26,11 +27,13 @@ export default function DeleteDialog({
   taskTitle,
 }: DeleteDialogProps) {
   const [isPending, startTransition] = useTransition();
+  const { refresh } = useWorkspace();
 
   const handleDelete = () => {
     startTransition(async () => {
       await deleteTask(taskId);
       onOpenChange(false);
+      refresh();
     });
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDroppable } from "@dnd-kit/core";
 import { ChevronDown, MoreHorizontal, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,11 +14,16 @@ import {
 import TaskRow from "@/components/TaskRow";
 import { groupColorStyles } from "@/components/TaskBadges";
 import { deleteGroup } from "@/lib/actions/groups";
-import { type Group, type Task } from "@/lib/types";
+import { type Group, type Task, type User } from "@/lib/types";
 
 interface TaskGroupProps {
   group: Group;
   tasks: Task[];
+  allTaskIds?: string[];
+  users?: User[];
+  groups?: Group[];
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
   onAddTask: (groupId: string) => void;
   onAddSubtask: (parentId: string) => void;
   onEdit: (task: Task) => void;
@@ -29,15 +35,21 @@ interface TaskGroupProps {
 export default function TaskGroup({
   group,
   tasks,
+  allTaskIds,
+  users = [],
+  groups = [],
+  selectedIds,
+  onToggleSelect,
   onAddTask,
   onAddSubtask,
   onEdit,
   onDelete,
   onEditGroup,
 }: TaskGroupProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(group.name === "完了");
   const [isPending, startTransition] = useTransition();
   const color = groupColorStyles[group.color] ?? groupColorStyles.gray;
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: group.id });
 
   const handleDeleteGroup = () => {
     if (!confirm(`「${group.name}」を削除しますか？\nこのグループのタスクはグループなしになります。`)) return;
@@ -89,20 +101,22 @@ export default function TaskGroup({
 
       {/* タスクテーブル */}
       {!collapsed && (
-        <div className="border border-t-0 border-gray-200 rounded-b-lg overflow-hidden bg-white">
+        <div ref={setDropRef} className={`border border-t-0 border-gray-200 rounded-b-lg overflow-hidden bg-white ${isOver ? "ring-2 ring-blue-300 ring-inset" : ""}`}>
           <table className="w-full text-sm table-fixed">
             <colgroup>
-              <col className="w-[30%]" />
+              <col className="w-[4%]" />
+              <col className="w-[24%]" />
+              <col className="w-[8%]" />
+              <col className="w-[15%]" />
+              <col className="w-[8%]" />
               <col className="w-[12%]" />
-              <col className="w-[8%]" />
-              <col className="w-[8%]" />
-              <col className="w-[14%]" />
-              <col className="w-[14%]" />
+              <col className="w-[12%]" />
               <col className="w-[7%]" />
-              <col className="w-[7%]" />
+              <col className="w-[10%]" />
             </colgroup>
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="py-2 px-2" />
                 <th className="py-2 px-3 text-left text-xs font-medium text-gray-500">タスク名</th>
                 <th className="py-2 px-3 text-left text-xs font-medium text-gray-500">担当者</th>
                 <th className="py-2 px-3 text-left text-xs font-medium text-gray-500">期限</th>
@@ -125,6 +139,10 @@ export default function TaskGroup({
                   <TaskRow
                     key={task.id}
                     task={task}
+                    users={users}
+                    groups={groups}
+                    selected={selectedIds?.has(task.id) ?? false}
+                    onToggleSelect={onToggleSelect}
                     onAddSubtask={onAddSubtask}
                     onEdit={onEdit}
                     onDelete={onDelete}

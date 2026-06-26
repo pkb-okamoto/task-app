@@ -1,19 +1,22 @@
 import { redirect } from "next/navigation";
-import Header from "@/components/Header";
-import TaskBoard from "@/components/TaskBoard";
+import WorkspaceRoot from "@/components/WorkspaceRoot";
 import BrowserNotification from "@/components/BrowserNotification";
 import { getTasks } from "@/lib/actions/tasks";
 import { getUsers } from "@/lib/actions/users";
 import { getGroups } from "@/lib/actions/groups";
+import { getWorkspaces } from "@/lib/actions/workspaces";
 import { getCurrentUser } from "@/lib/actions/auth";
-import { type Task, type User, type Group } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
+import { type Task, type User, type Group, type Workspace } from "@/lib/types";
 
-// サーバーコンポーネント：認証チェック後にデータを取得してTaskBoardに渡す
+// サーバーコンポーネント：認証チェック後にデータを取得してWorkspaceRootに渡す
 export default async function Home() {
   let currentUser: User | null = null;
   let tasks: Task[] = [];
   let users: User[] = [];
   let groups: Group[] = [];
+  let workspaces: Workspace[] = [];
+  let googleConnected = false;
 
   try {
     currentUser = await getCurrentUser();
@@ -22,7 +25,20 @@ export default async function Home() {
       redirect("/login");
     }
 
-    [tasks, users, groups] = await Promise.all([getTasks(), getUsers(), getGroups()]);
+    const supabase = await createClient();
+    const [tasksResult, usersResult, groupsResult, workspacesResult, googleToken] = await Promise.all([
+      getTasks(),
+      getUsers(),
+      getGroups(),
+      getWorkspaces(),
+      supabase.from("user_google_tokens").select("user_id").eq("user_id", currentUser.id).maybeSingle(),
+    ]);
+
+    tasks = tasksResult;
+    users = usersResult;
+    groups = groupsResult;
+    workspaces = workspacesResult;
+    googleConnected = !!googleToken.data;
   } catch (err) {
     if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
     console.warn("Supabase未接続: モックUIで表示します");
@@ -30,8 +46,14 @@ export default async function Home() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <Header currentUser={currentUser} />
-      <TaskBoard initialTasks={tasks} initialGroups={groups} users={users} />
+      <WorkspaceRoot
+        currentUser={currentUser}
+        initialTasks={tasks}
+        initialGroups={groups}
+        users={users}
+        workspaces={workspaces}
+        googleConnected={googleConnected}
+      />
       <BrowserNotification currentUser={currentUser} />
     </div>
   );

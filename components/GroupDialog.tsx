@@ -18,6 +18,7 @@ interface GroupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   group?: Group | null;
+  workspaceId?: string | null;
 }
 
 // 色の選択肢
@@ -32,7 +33,7 @@ const COLOR_OPTIONS: { value: GroupColor; label: string; bg: string; dot: string
 ];
 
 // グループ追加・編集ダイアログ
-export default function GroupDialog({ open, onOpenChange, group }: GroupDialogProps) {
+export default function GroupDialog({ open, onOpenChange, group, workspaceId }: GroupDialogProps) {
   const isEdit = !!group;
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
@@ -54,7 +55,7 @@ export default function GroupDialog({ open, onOpenChange, group }: GroupDialogPr
       if (isEdit && group) {
         await updateGroup(group.id, { name: name.trim(), color });
       } else {
-        await createGroup({ name: name.trim(), color });
+        await createGroup({ name: name.trim(), color, workspace_id: workspaceId ?? null });
       }
       onOpenChange(false);
     });
