@@ -308,7 +308,7 @@ export default function TaskRow({
                 )}
                 {isDueSoon && (
                   <span className="text-[10px] font-medium bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    明日期限
+                    {dueDaysLeft === 0 ? "今日期限" : dueDaysLeft === 1 ? "明日期限" : `${dueDaysLeft}日後`}
                   </span>
                 )}
               </div>
