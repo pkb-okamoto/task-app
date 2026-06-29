@@ -26,19 +26,24 @@ export default async function Home() {
     }
 
     const supabase = await createClient();
-    const [tasksResult, usersResult, groupsResult, workspacesResult, googleToken] = await Promise.all([
-      getTasks(),
+    const [usersResult, workspacesResult, googleToken] = await Promise.all([
       getUsers(),
-      getGroups(),
       getWorkspaces(),
       supabase.from("user_google_tokens").select("user_id").eq("user_id", currentUser.id).maybeSingle(),
     ]);
 
-    tasks = tasksResult;
     users = usersResult;
-    groups = groupsResult;
     workspaces = workspacesResult;
     googleConnected = !!googleToken.data;
+
+    // 最初のワークスペースのタスク・グループを取得
+    const firstWorkspaceId = workspaces[0]?.id ?? null;
+    const [tasksResult, groupsResult] = await Promise.all([
+      getTasks(firstWorkspaceId),
+      getGroups(firstWorkspaceId),
+    ]);
+    tasks = tasksResult;
+    groups = groupsResult;
   } catch (err) {
     if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
     console.warn("Supabase未接続: モックUIで表示します");

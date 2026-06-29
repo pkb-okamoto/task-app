@@ -54,12 +54,12 @@ export default function WorkspaceRoot({
   // 現在のワークスペースのデータを再取得（インライン編集後などに使用）
   const refresh = useCallback(async () => {
     const [newTasks, newGroups] = await Promise.all([
-      getTasks(null),
-      getGroups(null),
+      getTasks(currentWorkspaceId),
+      getGroups(currentWorkspaceId),
     ]);
     setTasks(newTasks);
     setGroups(newGroups);
-  }, []);
+  }, [currentWorkspaceId]);
 
   // ワークスペース切り替え
   const handleWorkspaceSwitch = (workspaceId: string) => {
