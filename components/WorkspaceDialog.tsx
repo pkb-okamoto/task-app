@@ -47,6 +47,7 @@ export default function WorkspaceDialog({
 
   if (!open || !workspace) return null;
 
+  const isOwner = members.some((m) => m.user_id === currentUserId && m.role === "owner");
   const memberIds = members.map((m) => m.user_id);
 
   // 追加可能なユーザー（検索でフィルタ、すでにメンバーは除外）
@@ -116,18 +117,22 @@ export default function WorkspaceDialog({
         </div>
 
         <div className="px-6 py-4 space-y-6">
-          {/* ワークスペース名 */}
+          {/* ワークスペース名（ownerのみ編集可） */}
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1.5 block">ワークスペース名</label>
-            <div className="flex gap-2">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); }}
-                className="flex-1 text-sm h-9"
-              />
-              <Button size="sm" className="h-9" onClick={handleSaveName}>保存</Button>
-            </div>
+            {isOwner ? (
+              <div className="flex gap-2">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); }}
+                  className="flex-1 text-sm h-9"
+                />
+                <Button size="sm" className="h-9" onClick={handleSaveName}>保存</Button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-700 px-1">{workspace.name}</p>
+            )}
           </div>
 
           {/* メンバー一覧 */}
@@ -148,7 +153,7 @@ export default function WorkspaceDialog({
                     </Avatar>
                     <span className="flex-1 text-sm text-gray-800">{user?.name ?? "不明"}</span>
                     <span className="text-xs text-gray-400">{m.role === "owner" ? "オーナー" : "メンバー"}</span>
-                    {m.user_id !== currentUserId && m.role !== "owner" && (
+                    {isOwner && m.user_id !== currentUserId && m.role !== "owner" && (
                       <button
                         className="p-1 rounded hover:bg-red-50"
                         onClick={() => handleRemoveMember(m.user_id)}
@@ -161,8 +166,8 @@ export default function WorkspaceDialog({
               })}
             </div>
 
-            {/* メール招待 */}
-            <div className="border-t border-gray-100 pt-3">
+            {/* メール招待（ownerのみ） */}
+            {isOwner && <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center gap-2 mb-2">
                 <Mail className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs font-medium text-gray-500">メールで招待</span>
@@ -195,7 +200,7 @@ export default function WorkspaceDialog({
                   <p className="text-xs text-green-600">招待メールを送信しました</p>
                 )}
               </div>
-            </div>
+            </div>}
           </div>
         </div>
 
