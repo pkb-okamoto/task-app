@@ -13,8 +13,7 @@ import TaskDialog from "@/components/TaskDialog";
 import DeleteDialog from "@/components/DeleteDialog";
 import GroupDialog from "@/components/GroupDialog";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
-import { createTask, deleteTask, updateTaskPositions } from "@/lib/actions/tasks";
-import { useWorkspace } from "@/lib/workspace-context";
+import { deleteTask, updateTaskPositions } from "@/lib/actions/tasks";
 import { type Group, type Task, type User } from "@/lib/types";
 
 type ViewMode = "table" | "kanban";
@@ -28,7 +27,6 @@ interface TaskBoardProps {
 
 // タスクボードメインコンポーネント（ワークスペース対応版）
 export default function TaskBoard({ initialTasks, initialGroups, users, workspaceId }: TaskBoardProps) {
-  const { refresh } = useWorkspace();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
   // refresh() 後に親から新しいタスクが渡されたら同期
@@ -288,16 +286,9 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
   };
 
   const handleQuickAdd = () => {
-    const firstGroup = initialGroups[0];
-    startTransition(async () => {
-      await createTask({
-        title: "新しいタスク",
-        group_id: firstGroup?.id ?? null,
-        group_status: firstGroup?.name ?? "未着手",
-        workspace_id: workspaceId ?? null,
-      });
-      refresh();
-    });
+    setCreateGroupId(initialGroups[0]?.id ?? null);
+    setCreateParentId(null);
+    setCreateOpen(true);
   };
 
   return (
