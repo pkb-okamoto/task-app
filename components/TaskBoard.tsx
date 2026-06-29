@@ -647,6 +647,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
         parentTaskId={createParentId}
         users={users}
         groups={initialGroups}
+        workspaceId={workspaceId}
       />
 
       {/* タスク編集ダイアログ */}

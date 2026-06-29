@@ -36,6 +36,7 @@ interface TaskDialogProps {
   parentTaskId?: string | null;
   users: User[];
   groups: Group[];
+  workspaceId?: string | null;
 }
 
 // 時刻の選択肢（30分刻み）
@@ -66,6 +67,7 @@ export default function TaskDialog({
   parentTaskId = null,
   users,
   groups,
+  workspaceId = null,
 }: TaskDialogProps) {
   const isEdit = !!task;
   const [isPending, startTransition] = useTransition();
@@ -152,6 +154,7 @@ export default function TaskDialog({
           priority,
           alert_days: alertDaysValue,
           parent_task_id: parentTaskId,
+          workspace_id: workspaceId,
         });
         if (newTaskId && selectedUserIds.length > 0) {
           await setTaskAssignees(newTaskId, selectedUserIds);

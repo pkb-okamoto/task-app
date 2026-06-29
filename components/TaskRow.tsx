@@ -329,6 +329,7 @@ export default function TaskRow({
                   onClick={() => {
                     startTransition(async () => {
                       await updateTask(task.id, { group_id: g.id, group_status: g.name });
+                      refresh();
                     });
                   }}
                 >
