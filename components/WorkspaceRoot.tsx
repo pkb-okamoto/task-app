@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import TaskBoard from "@/components/TaskBoard";
 import Dashboard from "@/components/Dashboard";
+import GoogleCalendarView from "@/components/GoogleCalendarView";
 import WorkspaceDialog from "@/components/WorkspaceDialog";
 import { createWorkspace, getWorkspaces } from "@/lib/actions/workspaces";
 import { getTasks } from "@/lib/actions/tasks";
@@ -35,7 +36,7 @@ export default function WorkspaceRoot({
   );
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
-  const [view, setView] = useState<"board" | "dashboard">("board");
+  const [view, setView] = useState<"board" | "dashboard" | "calendar">("board");
   const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [, startTransition] = useTransition();
@@ -104,6 +105,8 @@ export default function WorkspaceRoot({
         <div className="flex-1 min-w-0 flex flex-col">
           {view === "dashboard" ? (
             <Dashboard tasks={tasks} groups={groups} users={users} />
+          ) : view === "calendar" ? (
+            <GoogleCalendarView />
           ) : (
             <TaskBoard
               initialTasks={tasks}
