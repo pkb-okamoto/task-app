@@ -74,7 +74,10 @@ export default function TaskRow({
   // 期限超過・期限間近の判定
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dueDate = task.due_date ? new Date(task.due_date) : null;
+  // "YYYY-MM-DD" をローカルタイムで解釈（UTCにすると日付がずれる）
+  const dueDate = task.due_date
+    ? (() => { const [y, m, d] = task.due_date!.split("-").map(Number); return new Date(y, m - 1, d); })()
+    : null;
   const dueDaysLeft = dueDate && task.group_status !== "完了"
     ? Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     : null;
