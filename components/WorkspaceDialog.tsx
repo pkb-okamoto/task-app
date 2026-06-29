@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Trash2, UserPlus, X } from "lucide-react";
+import { Mail, Trash2, UserPlus, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import {
   removeMemberFromWorkspace,
   updateWorkspace,
 } from "@/lib/actions/workspaces";
+import { inviteMember } from "@/lib/actions/invite";
 import { type Workspace, type WorkspaceMember } from "@/lib/types";
 
 interface WorkspaceDialogProps {
@@ -31,6 +32,10 @@ export default function WorkspaceDialog({
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [name, setName] = useState(workspace?.name ?? "");
   const [search, setSearch] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -73,6 +78,26 @@ export default function WorkspaceDialog({
       await removeMemberFromWorkspace(workspace.id, userId);
       const updated = await getWorkspaceMembers(workspace.id);
       setMembers(updated);
+    });
+  };
+
+  const handleInvite = () => {
+    const email = inviteEmail.trim();
+    const name = inviteName.trim();
+    if (!email || !name) return;
+    setInviteError("");
+    setInviteSuccess(false);
+    startTransition(async () => {
+      const result = await inviteMember(workspace.id, email, name);
+      if (result.error) {
+        setInviteError(result.error);
+      } else {
+        setInviteSuccess(true);
+        setInviteEmail("");
+        setInviteName("");
+        const updated = await getWorkspaceMembers(workspace.id);
+        setMembers(updated);
+      }
     });
   };
 
@@ -136,38 +161,39 @@ export default function WorkspaceDialog({
               })}
             </div>
 
-            {/* メンバー追加 */}
+            {/* メール招待 */}
             <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center gap-2 mb-2">
-                <UserPlus className="h-3.5 w-3.5 text-gray-500" />
-                <span className="text-xs font-medium text-gray-500">メンバーを追加</span>
+                <Mail className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs font-medium text-gray-500">メールで招待</span>
               </div>
-              <Input
-                placeholder="名前で検索..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="text-sm h-8 mb-2"
-              />
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {addableUsers.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center py-2">追加できるユーザーがいません</p>
+              <div className="space-y-2">
+                <Input
+                  placeholder="名前"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  className="text-sm h-8"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="メールアドレス"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleInvite(); }}
+                    className="text-sm h-8 flex-1"
+                  />
+                  <Button size="sm" className="h-8 px-3" onClick={handleInvite}
+                    disabled={!inviteEmail.trim() || !inviteName.trim()}>
+                    <UserPlus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {inviteError && (
+                  <p className="text-xs text-red-600">{inviteError}</p>
                 )}
-                {addableUsers.map((user) => (
-                  <button
-                    key={user.id}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-blue-50 text-left transition-colors"
-                    onClick={() => handleAddMember(user.id)}
-                  >
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={user.avatar_url ?? ""} />
-                      <AvatarFallback className="text-[9px] bg-blue-100 text-blue-700">
-                        {user.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-gray-700">{user.name}</span>
-                    <span className="ml-auto text-xs text-blue-600">追加</span>
-                  </button>
-                ))}
+                {inviteSuccess && (
+                  <p className="text-xs text-green-600">招待メールを送信しました</p>
+                )}
               </div>
             </div>
           </div>
