@@ -1,8 +1,9 @@
-import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
 
 // ユーザーのOAuth2クライアントを取得
 async function getOAuth2Client(userId: string) {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return null;
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("user_google_tokens")
@@ -12,6 +13,7 @@ async function getOAuth2Client(userId: string) {
 
   if (!data?.refresh_token) return null;
 
+  const { google } = await import("googleapis");
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -47,6 +49,7 @@ export async function upsertCalendarEvent(
   }
   console.log("[Calendar] upsertCalendarEvent 開始 taskId:", task.id, "title:", task.title);
 
+  const { google } = await import("googleapis");
   const calendar = google.calendar({ version: "v3", auth });
   const supabase = await createClient();
 
@@ -126,6 +129,7 @@ export async function deleteCalendarEvent(userId: string, taskId: string) {
   }
   console.log("[Calendar] 削除対象 eventId:", data.event_id);
 
+  const { google } = await import("googleapis");
   const calendar = google.calendar({ version: "v3", auth });
   try {
     await calendar.events.delete({ calendarId: "primary", eventId: data.event_id });
@@ -142,6 +146,7 @@ export async function getCalendarEvents(userId: string) {
   const auth = await getOAuth2Client(userId);
   if (!auth) return [];
 
+  const { google } = await import("googleapis");
   const calendar = google.calendar({ version: "v3", auth });
 
   const now = new Date();
