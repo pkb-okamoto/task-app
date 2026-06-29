@@ -96,7 +96,16 @@ export default function KanbanCard({ task, onEdit, onDelete }: KanbanCardProps) 
       {/* 進捗バー */}
       {task.progress > 0 && (
         <div className="flex items-center gap-2 mb-2">
-          <Progress value={task.progress} className="h-1.5 flex-1" />
+          <Progress
+            value={task.progress}
+            className="h-1.5 flex-1"
+            indicatorClassName={
+              task.progress === 100 ? "bg-blue-500" :
+              task.progress < 30 ? "bg-red-500" :
+              task.progress <= 70 ? "bg-yellow-400" :
+              "bg-green-500"
+            }
+          />
           <span className="text-xs text-gray-400 w-7 text-right">{task.progress}%</span>
         </div>
       )}
