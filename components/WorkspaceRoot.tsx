@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import TaskBoard from "@/components/TaskBoard";
@@ -41,7 +41,11 @@ export default function WorkspaceRoot({
   const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("dashboard");
   const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [prefetchedMembers, setPrefetchedMembers] = useState<WorkspaceMember[] | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // ワークスペースIDごとにメンバーをキャッシュ
+  const membersCache = useRef<Map<string, WorkspaceMember[]>>(new Map());
 
   // ワークスペースが1つもない場合、デフォルトを自動作成
   useEffect(() => {
@@ -78,10 +82,28 @@ export default function WorkspaceRoot({
     });
   };
 
-  // 設定ダイアログを開く
+  // ホバー時にメンバーをプリフェッチ（キャッシュ済みならスキップ）
+  const handlePrefetch = (workspaceId: string) => {
+    if (membersCache.current.has(workspaceId)) return;
+    getWorkspaceMembers(workspaceId).then((members) => {
+      membersCache.current.set(workspaceId, members);
+    });
+  };
+
+  // 設定ダイアログを開く（キャッシュがあれば即表示）
   const handleManage = (workspace: Workspace) => {
+    const cached = membersCache.current.get(workspace.id) ?? null;
     setManageTarget(workspace);
+    setPrefetchedMembers(cached);
     setDialogOpen(true);
+  };
+
+  // ダイアログ内でメンバーが更新されたらキャッシュも更新
+  const handleMembersChange = (members: WorkspaceMember[]) => {
+    if (manageTarget) {
+      membersCache.current.set(manageTarget.id, members);
+    }
+    setWorkspaceMembers(members);
   };
 
   return (
@@ -102,15 +124,14 @@ export default function WorkspaceRoot({
           workspaceMembers={workspaceMembers}
           onSwitch={handleWorkspaceSwitch}
           onManage={handleManage}
+          onPrefetch={handlePrefetch}
           view={view}
           onViewChange={setView}
         />
         <div className="flex-1 min-w-0 flex flex-col relative">
-          {/* ロード中オーバーレイ（コンテンツを隠さず薄暗くするだけ） */}
           {isPending && (
             <div className="absolute inset-0 bg-white/50 z-10 pointer-events-none" />
           )}
-
           {view === "dashboard" ? (
             <Dashboard tasks={tasks} groups={groups} users={users} />
           ) : view === "calendar" ? (
@@ -138,7 +159,8 @@ export default function WorkspaceRoot({
         onOpenChange={setDialogOpen}
         allUsers={users}
         currentUserId={currentUser?.id ?? ""}
-        onMembersChange={setWorkspaceMembers}
+        initialMembers={prefetchedMembers}
+        onMembersChange={handleMembersChange}
       />
     </WorkspaceContext.Provider>
   );

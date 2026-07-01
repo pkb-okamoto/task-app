@@ -19,6 +19,7 @@ interface WorkspaceDialogProps {
   onOpenChange: (open: boolean) => void;
   allUsers: { id: string; name: string; avatar_url: string | null }[];
   currentUserId: string;
+  initialMembers?: WorkspaceMember[] | null;
   onMembersChange?: (members: WorkspaceMember[]) => void;
 }
 
@@ -30,9 +31,11 @@ export default function WorkspaceDialog({
   onOpenChange,
   allUsers,
   currentUserId,
+  initialMembers,
   onMembersChange,
 }: WorkspaceDialogProps) {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
@@ -46,8 +49,23 @@ export default function WorkspaceDialog({
   useEffect(() => {
     if (open && workspace) {
       setNameValue(workspace.name);
-      setMembers([]);
-      getWorkspaceMembers(workspace.id).then(setMembers);
+      if (initialMembers && initialMembers.length > 0) {
+        // プリフェッチ済みのデータを即座に表示
+        setMembers(initialMembers);
+        setLoading(false);
+        // バックグラウンドで最新データに更新
+        getWorkspaceMembers(workspace.id).then((fresh) => {
+          setMembers(fresh);
+        });
+      } else {
+        // キャッシュなし：ローディング表示してから取得
+        setMembers([]);
+        setLoading(true);
+        getWorkspaceMembers(workspace.id).then((fresh) => {
+          setMembers(fresh);
+          setLoading(false);
+        });
+      }
     }
     if (!open) {
       setSearch("");
@@ -108,10 +126,8 @@ export default function WorkspaceDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* 背景オーバーレイ */}
       <div className="absolute inset-0 bg-black/40" onClick={() => onOpenChange(false)} />
 
-      {/* ダイアログ本体 */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh]">
 
         {/* ヘッダー */}
@@ -170,10 +186,9 @@ export default function WorkspaceDialog({
           {/* ── セクション2: メンバー ── */}
           <div className="px-6 py-5 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              メンバー ({members.length}人)
+              メンバー {loading ? "" : `(${members.length}人)`}
             </p>
 
-            {/* 検索 */}
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <input
@@ -184,38 +199,49 @@ export default function WorkspaceDialog({
               />
             </div>
 
-            {/* メンバーリスト */}
             <div className="divide-y divide-gray-50 max-h-52 overflow-y-auto">
-              {filteredMembers.map((m) => {
-                const user = m.user ?? allUsers.find((u) => u.id === m.user_id);
-                return (
-                  <div key={m.user_id} className="flex items-center gap-3 py-2.5">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={user?.avatar_url ?? ""} />
-                      <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                        {user?.name?.charAt(0) ?? "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">
-                        {user?.name ?? "不明"}
-                      </p>
-                      <p className="text-xs text-gray-400">{roleLabel(m.role)}</p>
+              {loading ? (
+                /* スケルトン */
+                [1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 py-2.5 animate-pulse">
+                    <div className="h-8 w-8 rounded-full bg-gray-100 shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 bg-gray-100 rounded w-24" />
+                      <div className="h-2.5 bg-gray-100 rounded w-14" />
                     </div>
-                    {isOwner && m.user_id !== currentUserId && m.role !== "owner" && (
-                      <button
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
-                        onClick={() => handleRemoveMember(m.user_id)}
-                        title="削除"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
                   </div>
-                );
-              })}
-              {filteredMembers.length === 0 && (
+                ))
+              ) : filteredMembers.length === 0 ? (
                 <p className="text-sm text-gray-400 py-4 text-center">該当するメンバーがいません</p>
+              ) : (
+                filteredMembers.map((m) => {
+                  const user = m.user ?? allUsers.find((u) => u.id === m.user_id);
+                  return (
+                    <div key={m.user_id} className="flex items-center gap-3 py-2.5">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={user?.avatar_url ?? ""} />
+                        <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                          {user?.name?.charAt(0) ?? "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {user?.name ?? "不明"}
+                        </p>
+                        <p className="text-xs text-gray-400">{roleLabel(m.role)}</p>
+                      </div>
+                      {isOwner && m.user_id !== currentUserId && m.role !== "owner" && (
+                        <button
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
+                          onClick={() => handleRemoveMember(m.user_id)}
+                          title="削除"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

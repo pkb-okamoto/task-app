@@ -24,17 +24,18 @@ interface SidebarProps {
   workspaceMembers: WorkspaceMember[];
   onSwitch: (workspaceId: string) => void;
   onManage: (workspace: Workspace) => void;
+  onPrefetch: (workspaceId: string) => void;
   view?: "board" | "dashboard" | "calendar" | "members";
   onViewChange?: (view: "board" | "dashboard" | "calendar" | "members") => void;
 }
 
-// monday.com風の左サイドバー
 export default function Sidebar({
   workspaces,
   currentWorkspaceId,
   workspaceMembers,
   onSwitch,
   onManage,
+  onPrefetch,
   view = "board",
   onViewChange,
 }: SidebarProps) {
@@ -66,7 +67,6 @@ export default function Sidebar({
     });
   };
 
-  // 折りたたみ時はアイコンのみ表示
   if (collapsed) {
     return (
       <aside className="w-12 flex flex-col items-center py-3 gap-3 bg-gray-50 border-r border-gray-200 shrink-0">
@@ -96,7 +96,6 @@ export default function Sidebar({
 
   return (
     <aside className="w-60 flex flex-col bg-gray-50 border-r border-gray-200 shrink-0 overflow-y-auto overflow-x-hidden">
-      {/* ヘッダー部分 */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           メンバー管理
@@ -109,7 +108,6 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* メンバー一覧ボタン */}
       <div className="px-2 py-2 border-b border-gray-200">
         <button
           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${view === "members" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-200"}`}
@@ -124,9 +122,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* コンテンツセクション */}
       <div className="flex-1 px-2 py-2">
-        {/* ホーム */}
         <button
           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors mb-0.5 ${view === "dashboard" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-200"}`}
           onClick={() => onViewChange?.("dashboard")}
@@ -135,7 +131,6 @@ export default function Sidebar({
           <span>ホーム</span>
         </button>
 
-        {/* ダッシュボード */}
         <button
           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors mb-0.5 ${view === "dashboard" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-200"}`}
           onClick={() => onViewChange?.(view === "dashboard" ? "board" : "dashboard")}
@@ -144,7 +139,6 @@ export default function Sidebar({
           <span>ダッシュボード</span>
         </button>
 
-        {/* コンテンツセクション */}
         <div className="mt-2">
           <button
             className="w-full flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-500 hover:text-gray-700 uppercase tracking-wide"
@@ -161,7 +155,11 @@ export default function Sidebar({
           {contentOpen && (
             <div className="mt-1 space-y-0.5">
               {workspaces.map((ws) => (
-                <div key={ws.id} className="relative group/item">
+                <div
+                  key={ws.id}
+                  className="relative group/item"
+                  onMouseEnter={() => onPrefetch(ws.id)}
+                >
                   <button
                     className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors ${
                       ws.id === currentWorkspaceId
@@ -174,7 +172,6 @@ export default function Sidebar({
                     <span className="truncate flex-1">{ws.name}</span>
                   </button>
 
-                  {/* ホバー時のメニュー */}
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/item:flex items-center gap-0.5">
                     <button
                       className="p-0.5 rounded hover:bg-gray-300"
@@ -187,7 +184,6 @@ export default function Sidebar({
                     </button>
                   </div>
 
-                  {/* コンテキストメニュー */}
                   {menuOpenId === ws.id && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />
@@ -212,7 +208,6 @@ export default function Sidebar({
                 </div>
               ))}
 
-              {/* 新規ワークスペース追加 */}
               {creating ? (
                 <div className="px-1 pt-1">
                   <input
