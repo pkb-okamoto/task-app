@@ -123,6 +123,13 @@ export default function Sidebar({
       </div>
 
       <div className="flex-1 px-2 py-2">
+        {/* プロジェクトセクションヘッダー */}
+        <div className="flex items-center justify-between px-2 py-2 mb-1">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            プロジェクト
+          </span>
+        </div>
+
         <button
           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors mb-0.5 ${view === "dashboard" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-200"}`}
           onClick={() => onViewChange?.("dashboard")}
