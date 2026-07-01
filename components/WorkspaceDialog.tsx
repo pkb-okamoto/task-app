@@ -89,8 +89,11 @@ export default function WorkspaceDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* 背景オーバーレイ */}
+      <div className="absolute inset-0 bg-black/20" onClick={() => onOpenChange(false)} />
+      {/* 右パネル */}
+      <div className="relative bg-white shadow-xl w-80 h-full flex flex-col">
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">メンバー</h2>
