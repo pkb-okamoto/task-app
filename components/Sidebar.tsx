@@ -102,7 +102,7 @@ export default function Sidebar({
       {/* ヘッダー部分 */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          ワークスペース
+          メンバー管理
         </span>
         <button
           onClick={() => setCollapsed(true)}
@@ -123,7 +123,7 @@ export default function Sidebar({
             {currentWorkspace?.name?.charAt(0) ?? "W"}
           </div>
           <span className="text-sm font-medium text-gray-700 truncate flex-1">
-            {currentWorkspace?.name ?? "ワークスペース"}
+            メンバー一覧
           </span>
           <Users className="h-3.5 w-3.5 text-gray-400 shrink-0" />
         </button>
@@ -131,12 +131,6 @@ export default function Sidebar({
         {/* メンバーアバター一覧 */}
         {workspaceMembers.length > 0 && (
           <div className="px-2 pt-1.5 pb-0.5">
-            {(() => {
-              const owner = workspaceMembers.find((m) => m.role === "owner");
-              return owner?.user ? (
-                <p className="text-[10px] text-gray-400 mb-1 truncate">オーナー: {owner.user.name}</p>
-              ) : null;
-            })()}
             <div className="flex items-center gap-0.5 flex-wrap">
               {workspaceMembers.map((m) => (
                 <Avatar key={m.user_id} className="h-5 w-5" title={m.user?.name}>
