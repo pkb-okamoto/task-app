@@ -48,6 +48,7 @@ export interface Workspace {
   name: string
   created_by: string | null
   created_at: string
+  is_personal: boolean
 }
 
 export interface TaskAttachment {

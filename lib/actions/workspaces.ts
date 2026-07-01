@@ -41,7 +41,7 @@ export async function createWorkspace(name: string): Promise<Workspace> {
 
   const { data, error } = await supabase
     .from("workspaces")
-    .insert({ name, created_by: user.id })
+    .insert({ name, created_by: user.id, is_personal: name === "マイワークスペース" })
     .select()
     .single();
 
