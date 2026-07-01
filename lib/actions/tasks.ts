@@ -303,17 +303,15 @@ export async function setTaskAssignees(taskId: string, userIds: string[]) {
 
   if (task?.due_date) {
     const removedIds = prevIds.filter((id) => !userIds.includes(id));
-    const addedIds = userIds.filter((id) => !prevIds.includes(id));
-
     await Promise.all([
       // 外れた担当者のカレンダーから削除
       ...removedIds.map((uid) => deleteCalendarEvent(uid, taskId).catch(() => {})),
-      // 追加された担当者のカレンダーに追加
-      ...addedIds.map((uid) =>
+      // 現在の担当者全員のカレンダーに追加・更新（upsertなので重複しない）
+      ...userIds.map((uid) =>
         upsertCalendarEvent(uid, { id: task.id, title: task.title, due_date: task.due_date!, due_time: task.due_time ?? null, notes: task.notes }).catch(() => {})
       ),
     ]);
-  } else if (!task?.due_date) {
+  } else {
     // 期限がない場合は全員のカレンダーから削除
     await Promise.all(prevIds.map((uid) => deleteCalendarEvent(uid, taskId).catch(() => {})));
   }
