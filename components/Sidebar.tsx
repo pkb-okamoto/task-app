@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import {
   BarChart2,
-  Calendar,
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
@@ -189,15 +188,6 @@ export default function Sidebar({
         >
           <BarChart2 className="h-3.5 w-3.5 shrink-0" />
           <span>ダッシュボード</span>
-        </button>
-
-        {/* カレンダー */}
-        <button
-          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors mb-0.5 ${view === "calendar" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-200"}`}
-          onClick={() => onViewChange?.(view === "calendar" ? "board" : "calendar")}
-        >
-          <Calendar className="h-3.5 w-3.5 shrink-0" />
-          <span>カレンダー</span>
         </button>
 
         {/* コンテンツセクション */}

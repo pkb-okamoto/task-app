@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ChevronRight, Copy, ExternalLink, GripVertical, MoreHorizontal, Paperclip, Plus, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -48,6 +49,8 @@ export default function TaskRow({
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0 : 1,
   };
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
@@ -151,7 +154,7 @@ export default function TaskRow({
   // 日付をinput[type=date]のvalue形式に変換
   const toInputDate = (dateStr: string | null) => {
     if (!dateStr) return "";
-    return new Date(dateStr).toISOString().split("T")[0];
+    return dateStr; // "YYYY-MM-DD" 形式のまま返す（UTC変換によるズレを防ぐ）
   };
 
   return (

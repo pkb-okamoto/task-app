@@ -103,11 +103,6 @@ export async function createTask(input: {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 期限が設定されている場合はGoogleカレンダーに同期
-  if (input.due_date && newTask && user) {
-    await upsertCalendarEvent(user.id, { id: newTask.id, title: input.title, due_date: input.due_date, due_time: input.due_time ?? null, notes: input.notes }).catch(() => {});
-  }
-
   // 備考のメンション通知
   if (newTask && input.notes && user) {
     const allUsers = await getUsers();
@@ -156,15 +151,27 @@ export async function updateTask(
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 期限が変更された場合はGoogleカレンダーに同期
-  if ("due_date" in input && user) {
+  // 期限が変更された場合は担当者全員のGoogleカレンダーに同期
+  if ("due_date" in input) {
+    const { data: assigneeRows } = await supabase
+      .from("task_assignees")
+      .select("user_id")
+      .eq("task_id", taskId);
+    const assigneeIds = (assigneeRows ?? []).map((r) => r.user_id);
+
     if (input.due_date) {
       const { data: task } = await supabase.from("tasks").select("id, title, notes").eq("id", taskId).single();
       if (task) {
-        await upsertCalendarEvent(user.id, { id: task.id, title: task.title, due_date: input.due_date, due_time: input.due_time ?? null, notes: task.notes }).catch((e) => console.error("[Calendar] upsert失敗:", e?.message));
+        await Promise.all(
+          assigneeIds.map((uid) =>
+            upsertCalendarEvent(uid, { id: task.id, title: task.title, due_date: input.due_date!, due_time: input.due_time ?? null, notes: task.notes }).catch(() => {})
+          )
+        );
       }
     } else {
-      await deleteCalendarEvent(user.id, taskId).catch(() => {});
+      await Promise.all(
+        assigneeIds.map((uid) => deleteCalendarEvent(uid, taskId).catch(() => {}))
+      );
     }
   }
 
@@ -267,20 +274,49 @@ export async function updateTaskPositions(
 export async function setTaskAssignees(taskId: string, userIds: string[]) {
   const supabase = await createClient();
 
+  // 変更前の担当者を取得（カレンダー削除対象の特定に使用）
+  const { data: prevRows } = await supabase
+    .from("task_assignees")
+    .select("user_id")
+    .eq("task_id", taskId);
+  const prevIds = (prevRows ?? []).map((r) => r.user_id);
+
   const { error: deleteError } = await supabase
     .from("task_assignees")
     .delete()
     .eq("task_id", taskId);
   if (deleteError) throw new Error(deleteError.message);
 
-  if (userIds.length === 0) {
-    revalidatePath("/");
-    return;
+  if (userIds.length > 0) {
+    const { error: insertError } = await supabase.from("task_assignees").insert(
+      userIds.map((userId) => ({ task_id: taskId, user_id: userId }))
+    );
+    if (insertError) throw new Error(insertError.message);
   }
 
-  const { error: insertError } = await supabase.from("task_assignees").insert(
-    userIds.map((userId) => ({ task_id: taskId, user_id: userId }))
-  );
-  if (insertError) throw new Error(insertError.message);
+  // タスクの期限を取得してカレンダー同期
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("id, title, due_date, due_time, notes")
+    .eq("id", taskId)
+    .single();
+
+  if (task?.due_date) {
+    const removedIds = prevIds.filter((id) => !userIds.includes(id));
+    const addedIds = userIds.filter((id) => !prevIds.includes(id));
+
+    await Promise.all([
+      // 外れた担当者のカレンダーから削除
+      ...removedIds.map((uid) => deleteCalendarEvent(uid, taskId).catch(() => {})),
+      // 追加された担当者のカレンダーに追加
+      ...addedIds.map((uid) =>
+        upsertCalendarEvent(uid, { id: task.id, title: task.title, due_date: task.due_date!, due_time: task.due_time ?? null, notes: task.notes }).catch(() => {})
+      ),
+    ]);
+  } else if (!task?.due_date) {
+    // 期限がない場合は全員のカレンダーから削除
+    await Promise.all(prevIds.map((uid) => deleteCalendarEvent(uid, taskId).catch(() => {})));
+  }
+
   revalidatePath("/");
 }

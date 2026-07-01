@@ -40,12 +40,16 @@ export default function KanbanCard({ task, onEdit, onDelete }: KanbanCardProps) 
 
   // 期限切れチェック
   const isOverdue = task.due_date
-    ? new Date(task.due_date) < new Date() && task.group_status !== "完了"
+    ? (() => {
+        const [y, m, d] = task.due_date!.split("-").map(Number);
+        return new Date(y, m - 1, d) < new Date() && task.group_status !== "完了";
+      })()
     : false;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
-    return new Date(dateStr).toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
   };
 
   return (

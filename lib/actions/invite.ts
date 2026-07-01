@@ -25,7 +25,7 @@ export async function inviteMember(
 
   // 招待メール送信（Supabase Auth）
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-git-main-peekaboo-task.vercel.app"}/invite/accept`,
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app"}/invite/accept`,
     data: { name, workspace_id: workspaceId },
   });
 

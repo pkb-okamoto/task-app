@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { ArrowUpDown, CheckSquare, EyeOff, Eye, Filter, Plus, Search, LayoutList, Columns, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragOverEvent, type DragStartEvent } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
@@ -83,10 +83,32 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
     setActiveId(String(event.active.id));
   };
 
+  // ドラッグ中にリアルタイムで同一グループ内の順序を更新（テーブル行はtransformが効かないのでDOM並び替えで対応）
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeTask = tasks.find((t) => t.id === active.id);
+    const overTask = tasks.find((t) => t.id === over.id);
+    if (!activeTask || !overTask) return;
+    if (activeTask.group_id !== overTask.group_id) return;
+
+    const groupTasks = tasks.filter((t) => t.group_id === activeTask.group_id && !t.parent_task_id);
+    const oldIndex = groupTasks.findIndex((t) => t.id === active.id);
+    const newIndex = groupTasks.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+    const reordered = arrayMove(groupTasks, oldIndex, newIndex);
+    setTasks((prev) => {
+      const others = prev.filter((t) => t.group_id !== activeTask.group_id || t.parent_task_id);
+      return [...others, ...reordered];
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeTask = tasks.find((t) => t.id === active.id);
     if (!activeTask) return;
@@ -94,7 +116,13 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
     // over.id がグループIDの場合（グループの空き領域にドロップ）
     const overGroup = initialGroups.find((g) => g.id === over.id);
     if (overGroup) {
-      if (activeTask.group_id === overGroup.id) return;
+      if (activeTask.group_id === overGroup.id) {
+        // 同一グループへのドロップ：現在の並び順をDBに保存
+        const groupTasks = tasks.filter((t) => t.group_id === activeTask.group_id && !t.parent_task_id);
+        const updates = groupTasks.map((t, i) => ({ id: t.id, position: i + 1, group_id: t.group_id, group_status: t.group_status }));
+        startTransition(async () => { await updateTaskPositions(updates); });
+        return;
+      }
       const overGroupTasks = tasks.filter((t) => t.group_id === overGroup.id && !t.parent_task_id);
       const updates = [
         { id: activeTask.id, position: overGroupTasks.length + 1, group_id: overGroup.id, group_status: overGroup.name },
@@ -113,20 +141,11 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
     if (!overTask) return;
 
     if (activeTask.group_id === overTask.group_id) {
-      // 同じグループ内の並び替え
+      // 同一グループ：handleDragOverで既に並び替え済み、DBに保存するだけ
       const groupTasks = tasks.filter((t) => t.group_id === activeTask.group_id && !t.parent_task_id);
-      const oldIndex = groupTasks.findIndex((t) => t.id === active.id);
-      const newIndex = groupTasks.findIndex((t) => t.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const reordered = arrayMove(groupTasks, oldIndex, newIndex);
-      const updates = reordered.map((t, i) => ({
+      const updates = groupTasks.map((t, i) => ({
         id: t.id, position: i + 1, group_id: t.group_id, group_status: t.group_status,
       }));
-      setTasks((prev) => {
-        const others = prev.filter((t) => t.group_id !== activeTask.group_id || t.parent_task_id);
-        return [...others, ...reordered.map((t, i) => ({ ...t, position: i + 1 }))];
-      });
       startTransition(async () => { await updateTaskPositions(updates); });
     } else {
       // 別グループへの移動
@@ -502,7 +521,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
           {/* カンバンビュー */}
           {viewMode === "kanban" && (
             <KanbanBoard
-              tasks={tasks.filter((t) => matchesSearch(t))}
+              tasks={sortTasks(tasks.filter((t) => matchesSearch(t)))}
               groups={initialGroups}
               onAddTask={handleAddTask}
               onEdit={handleEdit}
@@ -512,8 +531,8 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
 
           {/* テーブルビュー */}
           {viewMode === "table" && (
-            <DndContext id="task-board-dnd" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-            <SortableContext items={tasks.filter((t) => !t.parent_task_id).map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <DndContext id="task-board-dnd" sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+            <SortableContext items={[...initialGroups.flatMap((g) => tasksByGroup(g.id)), ...ungroupedTasks].map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <>
               {initialGroups.map((group) => (
                 <TaskGroup
