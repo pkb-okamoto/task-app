@@ -45,6 +45,7 @@ export default function InviteAcceptPage() {
       return;
     }
 
+    setLoading(false);
     router.push("/");
   };
 

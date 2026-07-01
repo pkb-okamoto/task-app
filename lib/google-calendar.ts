@@ -72,12 +72,12 @@ export async function upsertCalendarEvent(
     .single();
 
   // 時刻指定ありは dateTime、なしは date（終日）
-  // 終了時刻 = 開始時刻 + 1時間
+  // 終了時刻 = 開始時刻 + 1時間（23時台は23:59で打ち切り）
   const endTime = task.due_time
     ? (() => {
         const [h, m] = task.due_time.split(":").map(Number);
-        const endH = String(h + 1).padStart(2, "0");
-        return `${endH}:${String(m).padStart(2, "0")}`;
+        if (h >= 23) return "23:59";
+        return `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       })()
     : null;
 
