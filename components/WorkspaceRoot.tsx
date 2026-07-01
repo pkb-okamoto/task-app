@@ -41,7 +41,7 @@ export default function WorkspaceRoot({
   const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("dashboard");
   const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   // ワークスペースが1つもない場合、デフォルトを自動作成
   useEffect(() => {
@@ -64,11 +64,10 @@ export default function WorkspaceRoot({
     setGroups(newGroups);
   }, [currentWorkspaceId]);
 
-  // ワークスペース切り替え
+  // ワークスペース切り替え：旧コンテンツを残したままロードし、完了後に一括更新
   const handleWorkspaceSwitch = (workspaceId: string) => {
+    if (workspaceId === currentWorkspaceId) return;
     setCurrentWorkspaceId(workspaceId);
-    setTasks([]);
-    setGroups([]);
     startTransition(async () => {
       const [newTasks, newGroups] = await Promise.all([
         getTasks(workspaceId),
@@ -106,7 +105,12 @@ export default function WorkspaceRoot({
           view={view}
           onViewChange={setView}
         />
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col relative">
+          {/* ロード中オーバーレイ（コンテンツを隠さず薄暗くするだけ） */}
+          {isPending && (
+            <div className="absolute inset-0 bg-white/50 z-10 pointer-events-none" />
+          )}
+
           {view === "dashboard" ? (
             <Dashboard tasks={tasks} groups={groups} users={users} />
           ) : view === "calendar" ? (

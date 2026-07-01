@@ -44,11 +44,19 @@ export default function WorkspaceDialog({
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (workspace) {
+    if (open && workspace) {
       setNameValue(workspace.name);
+      setMembers([]);
       getWorkspaceMembers(workspace.id).then(setMembers);
     }
-  }, [workspace]);
+    if (!open) {
+      setSearch("");
+      setShowInviteForm(false);
+      setEditingName(false);
+      setInviteError("");
+      setInviteSuccess(false);
+    }
+  }, [open, workspace?.id]);
 
   if (!open || !workspace) return null;
 
