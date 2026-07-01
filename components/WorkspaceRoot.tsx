@@ -53,7 +53,7 @@ export default function WorkspaceRoot({
   useEffect(() => {
     if (initialWorkspaces.length === 0 && currentUser) {
       startTransition(async () => {
-        const ws = await createWorkspace("マイワークスペース");
+        const ws = await createWorkspace("共有ワークスペース");
         setWorkspaces([ws]);
         setCurrentWorkspaceId(ws.id);
       });

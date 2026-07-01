@@ -33,14 +33,14 @@ export async function getWorkspaces(): Promise<Workspace[]> {
 
 // ============================================================
 // ワークスペース作成（作成者を自動でメンバーに追加）
-// マイワークスペースの場合は全ユーザーを自動追加
+// 共有ワークスペースの場合は全ユーザーを自動追加
 // ============================================================
 export async function createWorkspace(name: string): Promise<Workspace> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("未ログイン");
 
-  const isShared = name === "マイワークスペース";
+  const isShared = name === "共有ワークスペース";
 
   const { data, error } = await supabase
     .from("workspaces")
@@ -57,7 +57,7 @@ export async function createWorkspace(name: string): Promise<Workspace> {
     role: "owner",
   });
 
-  // マイワークスペースは全ユーザーを自動メンバー追加
+  // 共有ワークスペースは全ユーザーを自動メンバー追加
   if (isShared) {
     const { data: allUsers } = await supabase.from("users").select("id").neq("id", user.id);
     if (allUsers && allUsers.length > 0) {
