@@ -1,26 +1,21 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Mail, Search, Trash2, UserPlus } from "lucide-react";
+import { Mail, Search, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getWorkspaceMembers, removeMemberFromWorkspace } from "@/lib/actions/workspaces";
 import { inviteMember } from "@/lib/actions/invite";
 import { getUserEmails } from "@/lib/actions/users";
-import { type Workspace, type WorkspaceMember } from "@/lib/types";
+import { type Workspace } from "@/lib/types";
 
 interface MemberListProps {
   workspace: Workspace | null;
   allUsers: { id: string; name: string; avatar_url: string | null }[];
   currentUserId: string;
-  onMembersChange?: (members: WorkspaceMember[]) => void;
 }
 
-const roleLabel = (role: string) => (role === "owner" ? "オーナー" : "メンバー");
-
-export default function MemberList({ workspace, allUsers, currentUserId, onMembersChange }: MemberListProps) {
-  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+export default function MemberList({ workspace, allUsers, currentUserId: _currentUserId }: MemberListProps) {
   const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -31,35 +26,15 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (workspace) {
-      Promise.all([
-        getWorkspaceMembers(workspace.id),
-        getUserEmails(),
-      ]).then(([m, emails]) => {
-        setMembers(m);
-        setEmailMap(emails);
-        onMembersChange?.(m);
-      });
-    }
-  }, [workspace?.id]);
+    getUserEmails().then(setEmailMap);
+  }, []);
 
   if (!workspace) return null;
 
-  const isOwner = members.some((m) => m.user_id === currentUserId && m.role === "owner");
-
-  const filteredMembers = members.filter((m) => {
-    const user = m.user ?? allUsers.find((u) => u.id === m.user_id);
-    return search === "" || user?.name?.toLowerCase().includes(search.toLowerCase());
-  });
-
-  const handleRemove = (userId: string) => {
-    startTransition(async () => {
-      await removeMemberFromWorkspace(workspace.id, userId);
-      const updated = await getWorkspaceMembers(workspace.id);
-      setMembers(updated);
-      onMembersChange?.(updated);
-    });
-  };
+  const filteredUsers = allUsers.filter((u) =>
+    search === "" || u.name.toLowerCase().includes(search.toLowerCase()) ||
+    (emailMap[u.id] ?? "").toLowerCase().includes(search.toLowerCase())
+  );
 
   const handleInvite = () => {
     const email = inviteEmail.trim();
@@ -75,9 +50,6 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
         setInviteSuccess(true);
         setInviteEmail("");
         setInviteName("");
-        const updated = await getWorkspaceMembers(workspace.id);
-        setMembers(updated);
-        onMembersChange?.(updated);
       }
     });
   };
@@ -149,46 +121,32 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
         </div>
 
         {/* テーブルヘッダー */}
-        <div className="flex items-center px-3 py-2 border-b border-gray-200 mb-1">
-          <span className="text-xs font-medium text-gray-400 flex-1">名前</span>
-          <span className="text-xs font-medium text-gray-400 w-24">役割</span>
-          {isOwner && <span className="w-8" />}
+        <div className="px-3 py-2 border-b border-gray-200 mb-1">
+          <span className="text-xs font-medium text-gray-400">名前</span>
         </div>
 
         {/* メンバー行 */}
         <div className="divide-y divide-gray-100">
-          {filteredMembers.map((m) => {
-            const user = m.user ?? allUsers.find((u) => u.id === m.user_id);
-            const email = emailMap[m.user_id] ?? "";
+          {filteredUsers.map((u) => {
+            const email = emailMap[u.id] ?? "";
             return (
-              <div key={m.user_id} className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <div key={u.id} className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors">
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={user?.avatar_url ?? ""} />
+                  <AvatarImage src={u.avatar_url ?? ""} />
                   <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                    {user?.name?.charAt(0) ?? "?"}
+                    {u.name?.charAt(0) ?? "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{user?.name ?? "不明"}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
                   {email && <p className="text-xs text-gray-400 truncate">{email}</p>}
                 </div>
-                <span className="text-sm text-gray-500 w-24">{roleLabel(m.role)}</span>
-                {isOwner && m.user_id !== currentUserId && m.role !== "owner" ? (
-                  <button
-                    className="w-8 flex justify-center p-1 rounded hover:bg-red-50"
-                    onClick={() => handleRemove(m.user_id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-400" />
-                  </button>
-                ) : isOwner ? (
-                  <span className="w-8" />
-                ) : null}
               </div>
             );
           })}
         </div>
 
-        <p className="text-xs text-gray-400 mt-4">{members.length}人のメンバー</p>
+        <p className="text-xs text-gray-400 mt-4">{allUsers.length}人のメンバー</p>
       </div>
     </div>
   );

@@ -115,7 +115,6 @@ export default function WorkspaceRoot({
               workspace={workspaces.find((w) => w.id === currentWorkspaceId) ?? null}
               allUsers={users}
               currentUserId={currentUser?.id ?? ""}
-              onMembersChange={setWorkspaceMembers}
             />
           ) : (
             <TaskBoard
