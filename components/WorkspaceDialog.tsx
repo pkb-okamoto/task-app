@@ -171,8 +171,8 @@ export default function WorkspaceDialog({
               })}
             </div>
 
-            {/* メール招待（ownerのみ、個人ワークスペースは非表示） */}
-            {isOwner && !workspace.is_personal && <div className="border-t border-gray-100 pt-3">
+            {/* メール招待（ownerのみ） */}
+            {isOwner && <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center gap-2 mb-2">
                 <Mail className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs font-medium text-gray-500">メールで招待</span>

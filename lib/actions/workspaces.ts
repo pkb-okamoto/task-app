@@ -33,26 +33,39 @@ export async function getWorkspaces(): Promise<Workspace[]> {
 
 // ============================================================
 // ワークスペース作成（作成者を自動でメンバーに追加）
+// マイワークスペースの場合は全ユーザーを自動追加
 // ============================================================
 export async function createWorkspace(name: string): Promise<Workspace> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("未ログイン");
 
+  const isShared = name === "マイワークスペース";
+
   const { data, error } = await supabase
     .from("workspaces")
-    .insert({ name, created_by: user.id, is_personal: name === "マイワークスペース" })
+    .insert({ name, created_by: user.id, is_personal: false })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
 
-  // 作成者をメンバーとして追加
+  // 作成者をオーナーとして追加
   await supabase.from("workspace_members").insert({
     workspace_id: data.id,
     user_id: user.id,
     role: "owner",
   });
+
+  // マイワークスペースは全ユーザーを自動メンバー追加
+  if (isShared) {
+    const { data: allUsers } = await supabase.from("users").select("id").neq("id", user.id);
+    if (allUsers && allUsers.length > 0) {
+      await supabase.from("workspace_members").insert(
+        allUsers.map((u) => ({ workspace_id: data.id, user_id: u.id, role: "member" }))
+      );
+    }
+  }
 
   revalidatePath("/");
   return data;
