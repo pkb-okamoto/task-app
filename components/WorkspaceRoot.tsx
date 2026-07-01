@@ -7,7 +7,7 @@ import TaskBoard from "@/components/TaskBoard";
 import Dashboard from "@/components/Dashboard";
 import GoogleCalendarView from "@/components/GoogleCalendarView";
 import WorkspaceDialog from "@/components/WorkspaceDialog";
-import { createWorkspace, getWorkspaces, getWorkspaceMembers } from "@/lib/actions/workspaces";
+import { createWorkspace, getWorkspaceMembers } from "@/lib/actions/workspaces";
 import { getTasks } from "@/lib/actions/tasks";
 import { getGroups } from "@/lib/actions/groups";
 import { WorkspaceContext } from "@/lib/workspace-context";
@@ -73,16 +73,16 @@ export default function WorkspaceRoot({
   // ワークスペース切り替え
   const handleWorkspaceSwitch = (workspaceId: string) => {
     setCurrentWorkspaceId(workspaceId);
+    setTasks([]);
+    setGroups([]);
     startTransition(async () => {
-      const [newTasks, newGroups, updated, members] = await Promise.all([
+      const [newTasks, newGroups, members] = await Promise.all([
         getTasks(workspaceId),
         getGroups(workspaceId),
-        getWorkspaces(),
         getWorkspaceMembers(workspaceId),
       ]);
       setTasks(newTasks);
       setGroups(newGroups);
-      setWorkspaces(updated);
       setWorkspaceMembers(members);
     });
   };
