@@ -12,9 +12,19 @@ export async function getWorkspaces(): Promise<Workspace[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // 自分がメンバーのワークスペースIDを取得
+  const { data: memberRows } = await supabase
+    .from("workspace_members")
+    .select("workspace_id")
+    .eq("user_id", user.id);
+
+  const workspaceIds = (memberRows ?? []).map((r) => r.workspace_id);
+  if (workspaceIds.length === 0) return [];
+
   const { data, error } = await supabase
     .from("workspaces")
     .select("*")
+    .in("id", workspaceIds)
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
