@@ -7,11 +7,11 @@ import TaskBoard from "@/components/TaskBoard";
 import Dashboard from "@/components/Dashboard";
 import GoogleCalendarView from "@/components/GoogleCalendarView";
 import WorkspaceDialog from "@/components/WorkspaceDialog";
-import { createWorkspace, getWorkspaces } from "@/lib/actions/workspaces";
+import { createWorkspace, getWorkspaces, getWorkspaceMembers } from "@/lib/actions/workspaces";
 import { getTasks } from "@/lib/actions/tasks";
 import { getGroups } from "@/lib/actions/groups";
 import { WorkspaceContext } from "@/lib/workspace-context";
-import { type Group, type Task, type User, type Workspace } from "@/lib/types";
+import { type Group, type Task, type User, type Workspace, type WorkspaceMember } from "@/lib/types";
 
 interface WorkspaceRootProps {
   currentUser: User | null;
@@ -36,10 +36,18 @@ export default function WorkspaceRoot({
   );
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [view, setView] = useState<"board" | "dashboard" | "calendar">("board");
   const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [, startTransition] = useTransition();
+
+  // 初期メンバー取得
+  useEffect(() => {
+    if (initialWorkspaces[0]?.id) {
+      getWorkspaceMembers(initialWorkspaces[0].id).then(setWorkspaceMembers);
+    }
+  }, []);
 
   // ワークスペースが1つもない場合、デフォルトを自動作成
   useEffect(() => {
@@ -52,7 +60,7 @@ export default function WorkspaceRoot({
     }
   }, []);
 
-  // 現在のワークスペースのデータを再取得（インライン編集後などに使用）
+  // 現在のワークスペースのデータを再取得
   const refresh = useCallback(async () => {
     const [newTasks, newGroups] = await Promise.all([
       getTasks(currentWorkspaceId),
@@ -66,14 +74,16 @@ export default function WorkspaceRoot({
   const handleWorkspaceSwitch = (workspaceId: string) => {
     setCurrentWorkspaceId(workspaceId);
     startTransition(async () => {
-      const [newTasks, newGroups, updated] = await Promise.all([
+      const [newTasks, newGroups, updated, members] = await Promise.all([
         getTasks(workspaceId),
         getGroups(workspaceId),
         getWorkspaces(),
+        getWorkspaceMembers(workspaceId),
       ]);
       setTasks(newTasks);
       setGroups(newGroups);
       setWorkspaces(updated);
+      setWorkspaceMembers(members);
     });
   };
 
@@ -97,6 +107,7 @@ export default function WorkspaceRoot({
         <Sidebar
           workspaces={workspaces}
           currentWorkspaceId={currentWorkspaceId}
+          workspaceMembers={workspaceMembers}
           onSwitch={handleWorkspaceSwitch}
           onManage={handleManage}
           view={view}
@@ -124,6 +135,7 @@ export default function WorkspaceRoot({
         onOpenChange={setDialogOpen}
         allUsers={users}
         currentUserId={currentUser?.id ?? ""}
+        onMembersChange={(members) => setWorkspaceMembers(members)}
       />
     </WorkspaceContext.Provider>
   );
