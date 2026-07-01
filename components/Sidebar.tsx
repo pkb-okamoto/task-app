@@ -162,15 +162,6 @@ export default function Sidebar({
                     {ws.id === currentWorkspaceId && <span className="text-[10px] text-blue-400">✓</span>}
                   </button>
                 ))}
-                <div className="border-t border-gray-100 mt-1 pt-1">
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50"
-                    onClick={() => { setSwitcherOpen(false); setCreating(true); }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    新しいワークスペースを作成
-                  </button>
-                </div>
               </div>
             </>
           )}
@@ -323,14 +314,6 @@ export default function Sidebar({
                 </div>
               ))}
 
-              {/* 新規追加ボタン */}
-              <button
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
-                onClick={() => setCreating(true)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>新規追加</span>
-              </button>
             </div>
           )}
         </div>
