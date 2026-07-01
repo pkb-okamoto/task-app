@@ -119,13 +119,11 @@ export default function Sidebar({
           onClick={() => currentWorkspace && onManage(currentWorkspace)}
           title="メンバーを管理"
         >
-          <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-            {currentWorkspace?.name?.charAt(0) ?? "W"}
-          </div>
+          <Users className="h-4 w-4 text-blue-600 shrink-0" />
           <span className="text-sm font-medium text-gray-700 truncate flex-1">
             メンバー一覧
           </span>
-          <Users className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+          <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
         </button>
 
         {/* メンバーアバター一覧 */}
