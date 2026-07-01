@@ -24,9 +24,8 @@ interface SidebarProps {
   currentWorkspaceId: string | null;
   workspaceMembers: WorkspaceMember[];
   onSwitch: (workspaceId: string) => void;
-  onManage: (workspace: Workspace) => void;
-  view?: "board" | "dashboard" | "calendar";
-  onViewChange?: (view: "board" | "dashboard" | "calendar") => void;
+  view?: "board" | "dashboard" | "calendar" | "members";
+  onViewChange?: (view: "board" | "dashboard" | "calendar" | "members") => void;
 }
 
 // monday.com風の左サイドバー
@@ -35,7 +34,6 @@ export default function Sidebar({
   currentWorkspaceId,
   workspaceMembers,
   onSwitch,
-  onManage,
   view = "board",
   onViewChange,
 }: SidebarProps) {
@@ -115,9 +113,9 @@ export default function Sidebar({
       {/* 現在のワークスペース＋メンバーエリア（クリックでメンバー管理ダイアログ） */}
       <div className="px-2 py-2 border-b border-gray-200">
         <button
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-200 text-left transition-colors"
-          onClick={() => currentWorkspace && onManage(currentWorkspace)}
-          title="メンバーを管理"
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${view === "members" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-200"}`}
+          onClick={() => onViewChange?.(view === "members" ? "board" : "members")}
+          title="メンバー一覧"
         >
           <Users className="h-4 w-4 text-blue-600 shrink-0" />
           <span className="text-sm font-medium text-gray-700 truncate flex-1">
@@ -185,7 +183,7 @@ export default function Sidebar({
                         ? "bg-blue-100 text-blue-700 font-medium"
                         : "text-gray-600 hover:bg-gray-200"
                     }`}
-                    onClick={() => onSwitch(ws.id)}
+                    onClick={() => { onSwitch(ws.id); onViewChange?.("board"); }}
                   >
                     <Table2 className="h-3.5 w-3.5 shrink-0 opacity-60" />
                     <span className="truncate flex-1">{ws.name}</span>
@@ -211,7 +209,7 @@ export default function Sidebar({
                       <div className="absolute right-0 top-full z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-36 mt-0.5">
                         <button
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                          onClick={() => { setMenuOpenId(null); onManage(ws); }}
+                          onClick={() => { setMenuOpenId(null); onSwitch(ws.id); onViewChange?.("members"); }}
                         >
                           <LayoutGrid className="h-3.5 w-3.5" />
                           設定

@@ -6,7 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import TaskBoard from "@/components/TaskBoard";
 import Dashboard from "@/components/Dashboard";
 import GoogleCalendarView from "@/components/GoogleCalendarView";
-import WorkspaceDialog from "@/components/WorkspaceDialog";
+import MemberList from "@/components/MemberList";
 import { createWorkspace, getWorkspaceMembers } from "@/lib/actions/workspaces";
 import { getTasks } from "@/lib/actions/tasks";
 import { getGroups } from "@/lib/actions/groups";
@@ -37,9 +37,7 @@ export default function WorkspaceRoot({
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
-  const [view, setView] = useState<"board" | "dashboard" | "calendar">("board");
-  const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("board");
   const [, startTransition] = useTransition();
 
   // 初期メンバー取得
@@ -87,11 +85,6 @@ export default function WorkspaceRoot({
     });
   };
 
-  const handleManage = (ws: Workspace) => {
-    setManageTarget(ws);
-    setDialogOpen(true);
-  };
-
   return (
     <WorkspaceContext.Provider value={{ refresh }}>
       <Header
@@ -109,7 +102,6 @@ export default function WorkspaceRoot({
           currentWorkspaceId={currentWorkspaceId}
           workspaceMembers={workspaceMembers}
           onSwitch={handleWorkspaceSwitch}
-          onManage={handleManage}
           view={view}
           onViewChange={setView}
         />
@@ -118,6 +110,13 @@ export default function WorkspaceRoot({
             <Dashboard tasks={tasks} groups={groups} users={users} />
           ) : view === "calendar" ? (
             <GoogleCalendarView />
+          ) : view === "members" ? (
+            <MemberList
+              workspace={workspaces.find((w) => w.id === currentWorkspaceId) ?? null}
+              allUsers={users}
+              currentUserId={currentUser?.id ?? ""}
+              onMembersChange={setWorkspaceMembers}
+            />
           ) : (
             <TaskBoard
               initialTasks={tasks}
@@ -128,15 +127,6 @@ export default function WorkspaceRoot({
           )}
         </div>
       </div>
-
-      <WorkspaceDialog
-        workspace={manageTarget}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        allUsers={users}
-        currentUserId={currentUser?.id ?? ""}
-        onMembersChange={(members) => setWorkspaceMembers(members)}
-      />
     </WorkspaceContext.Provider>
   );
 }
