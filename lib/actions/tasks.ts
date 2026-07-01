@@ -198,11 +198,13 @@ export async function updateTask(
 export async function deleteTask(taskId: string) {
   const supabase = await createClient();
 
-  // Googleカレンダーのイベントも削除
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    await deleteCalendarEvent(user.id, taskId).catch(() => {});
-  }
+  // 担当者全員のGoogleカレンダーからイベントを削除
+  const { data: assigneeRows } = await supabase
+    .from("task_assignees")
+    .select("user_id")
+    .eq("task_id", taskId);
+  const assigneeIds = (assigneeRows ?? []).map((r) => r.user_id);
+  await Promise.all(assigneeIds.map((uid) => deleteCalendarEvent(uid, taskId).catch(() => {})));
 
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) throw new Error(error.message);

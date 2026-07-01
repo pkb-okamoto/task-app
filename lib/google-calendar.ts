@@ -72,12 +72,21 @@ export async function upsertCalendarEvent(
     .single();
 
   // 時刻指定ありは dateTime、なしは date（終日）
+  // 終了時刻 = 開始時刻 + 1時間
+  const endTime = task.due_time
+    ? (() => {
+        const [h, m] = task.due_time.split(":").map(Number);
+        const endH = String(h + 1).padStart(2, "0");
+        return `${endH}:${String(m).padStart(2, "0")}`;
+      })()
+    : null;
+
   const eventBody = task.due_time
     ? {
         summary: task.title,
         description: task.notes ?? "",
         start: { dateTime: `${task.due_date}T${task.due_time}:00`, timeZone: "Asia/Tokyo" },
-        end: { dateTime: `${task.due_date}T${task.due_time}:00`, timeZone: "Asia/Tokyo" },
+        end: { dateTime: `${task.due_date}T${endTime}:00`, timeZone: "Asia/Tokyo" },
       }
     : {
         summary: task.title,
