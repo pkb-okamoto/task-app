@@ -7,6 +7,7 @@ import TaskBoard from "@/components/TaskBoard";
 import Dashboard from "@/components/Dashboard";
 import GoogleCalendarView from "@/components/GoogleCalendarView";
 import MemberList from "@/components/MemberList";
+import WorkspaceDialog from "@/components/WorkspaceDialog";
 import { createWorkspace, getWorkspaceMembers } from "@/lib/actions/workspaces";
 import { getTasks } from "@/lib/actions/tasks";
 import { getGroups } from "@/lib/actions/groups";
@@ -38,14 +39,9 @@ export default function WorkspaceRoot({
   const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("dashboard");
+  const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [, startTransition] = useTransition();
-
-  // 初期メンバー取得
-  useEffect(() => {
-    if (initialWorkspaces[0]?.id) {
-      getWorkspaceMembers(initialWorkspaces[0].id).then(setWorkspaceMembers);
-    }
-  }, []);
 
   // ワークスペースが1つもない場合、デフォルトを自動作成
   useEffect(() => {
@@ -74,15 +70,19 @@ export default function WorkspaceRoot({
     setTasks([]);
     setGroups([]);
     startTransition(async () => {
-      const [newTasks, newGroups, members] = await Promise.all([
+      const [newTasks, newGroups] = await Promise.all([
         getTasks(workspaceId),
         getGroups(workspaceId),
-        getWorkspaceMembers(workspaceId),
       ]);
       setTasks(newTasks);
       setGroups(newGroups);
-      setWorkspaceMembers(members);
     });
+  };
+
+  // 設定ダイアログを開く
+  const handleManage = (workspace: Workspace) => {
+    setManageTarget(workspace);
+    setDialogOpen(true);
   };
 
   return (
@@ -102,6 +102,7 @@ export default function WorkspaceRoot({
           currentWorkspaceId={currentWorkspaceId}
           workspaceMembers={workspaceMembers}
           onSwitch={handleWorkspaceSwitch}
+          onManage={handleManage}
           view={view}
           onViewChange={setView}
         />
@@ -126,6 +127,15 @@ export default function WorkspaceRoot({
           )}
         </div>
       </div>
+
+      <WorkspaceDialog
+        workspace={manageTarget}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        allUsers={users}
+        currentUserId={currentUser?.id ?? ""}
+        onMembersChange={setWorkspaceMembers}
+      />
     </WorkspaceContext.Provider>
   );
 }

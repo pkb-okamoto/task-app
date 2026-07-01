@@ -8,9 +8,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Home,
-  LayoutGrid,
   MoreHorizontal,
   Plus,
+  Settings,
   Table2,
   Trash2,
   Users,
@@ -23,6 +23,7 @@ interface SidebarProps {
   currentWorkspaceId: string | null;
   workspaceMembers: WorkspaceMember[];
   onSwitch: (workspaceId: string) => void;
+  onManage: (workspace: Workspace) => void;
   view?: "board" | "dashboard" | "calendar" | "members";
   onViewChange?: (view: "board" | "dashboard" | "calendar" | "members") => void;
 }
@@ -33,6 +34,7 @@ export default function Sidebar({
   currentWorkspaceId,
   workspaceMembers,
   onSwitch,
+  onManage,
   view = "board",
   onViewChange,
 }: SidebarProps) {
@@ -41,11 +43,7 @@ export default function Sidebar({
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
   const [, startTransition] = useTransition();
-
-  const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId);
 
   const handleCreate = () => {
     const trimmed = newName.trim();
@@ -55,16 +53,6 @@ export default function Sidebar({
       setNewName("");
       setCreating(false);
       onSwitch(ws.id);
-    });
-  };
-
-  const handleRename = (ws: Workspace) => {
-    const trimmed = renameValue.trim();
-    if (!trimmed || trimmed === ws.name) { setRenamingId(null); return; }
-    startTransition(async () => {
-      const { updateWorkspace } = await import("@/lib/actions/workspaces");
-      await updateWorkspace(ws.id, trimmed);
-      setRenamingId(null);
     });
   };
 
@@ -121,7 +109,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* 現在のワークスペース＋メンバーエリア（クリックでメンバー管理ダイアログ） */}
+      {/* メンバー一覧ボタン */}
       <div className="px-2 py-2 border-b border-gray-200">
         <button
           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${view === "members" ? "bg-blue-100 text-blue-700" : "hover:bg-gray-200"}`}
@@ -134,7 +122,6 @@ export default function Sidebar({
           </span>
           <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
         </button>
-
       </div>
 
       {/* コンテンツセクション */}
@@ -175,21 +162,6 @@ export default function Sidebar({
             <div className="mt-1 space-y-0.5">
               {workspaces.map((ws) => (
                 <div key={ws.id} className="relative group/item">
-                  {renamingId === ws.id ? (
-                    <div className="px-1 py-1">
-                      <input
-                        className="w-full text-sm border border-blue-400 rounded px-2 py-1 outline-none"
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleRename(ws);
-                          if (e.key === "Escape") setRenamingId(null);
-                        }}
-                        onBlur={() => handleRename(ws)}
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
                   <button
                     className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors ${
                       ws.id === currentWorkspaceId
@@ -201,7 +173,6 @@ export default function Sidebar({
                     <Table2 className="h-3.5 w-3.5 shrink-0 opacity-60" />
                     <span className="truncate flex-1">{ws.name}</span>
                   </button>
-                  )}
 
                   {/* ホバー時のメニュー */}
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/item:flex items-center gap-0.5">
@@ -223,10 +194,10 @@ export default function Sidebar({
                       <div className="absolute right-0 top-full z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-36 mt-0.5">
                         <button
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                          onClick={() => { setMenuOpenId(null); setRenamingId(ws.id); setRenameValue(ws.name); }}
+                          onClick={() => { setMenuOpenId(null); onManage(ws); }}
                         >
-                          <LayoutGrid className="h-3.5 w-3.5" />
-                          名前を変更
+                          <Settings className="h-3.5 w-3.5" />
+                          設定
                         </button>
                         <button
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
