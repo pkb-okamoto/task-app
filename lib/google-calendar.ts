@@ -1,11 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 
-// ユーザーのOAuth2クライアントを取得
+function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
+
+// ユーザーのOAuth2クライアントを取得（adminクライアントでRLSをバイパス）
 async function getOAuth2Client(userId: string) {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return null;
 
-  const supabase = await createClient();
-  const { data } = await supabase
+  const admin = getAdminClient();
+  const { data } = await admin
     .from("user_google_tokens")
     .select("access_token, refresh_token, expiry_date")
     .eq("user_id", userId)
@@ -26,9 +35,10 @@ async function getOAuth2Client(userId: string) {
     expiry_date: data.expiry_date,
   });
 
-  // トークンが更新されたらDBに保存
+  // トークンが更新されたらDBに保存（adminクライアントでRLSをバイパス）
   oauth2Client.on("tokens", async (tokens) => {
-    await supabase.from("user_google_tokens").update({
+    const admin = getAdminClient();
+    await admin.from("user_google_tokens").update({
       access_token: tokens.access_token,
       expiry_date: tokens.expiry_date,
     }).eq("user_id", userId);
