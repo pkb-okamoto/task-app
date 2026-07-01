@@ -19,6 +19,7 @@ interface WorkspaceDialogProps {
   onOpenChange: (open: boolean) => void;
   allUsers: { id: string; name: string; avatar_url: string | null }[];
   currentUserId: string;
+  onMembersChange?: (members: WorkspaceMember[]) => void;
 }
 
 // ワークスペース管理ダイアログ（メンバー招待・名前変更）
@@ -28,6 +29,7 @@ export default function WorkspaceDialog({
   onOpenChange,
   allUsers,
   currentUserId,
+  onMembersChange,
 }: WorkspaceDialogProps) {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [name, setName] = useState(workspace?.name ?? "");
@@ -70,6 +72,7 @@ export default function WorkspaceDialog({
       await addMemberToWorkspace(workspace.id, userId);
       const updated = await getWorkspaceMembers(workspace.id);
       setMembers(updated);
+      onMembersChange?.(updated);
       setSearch("");
     });
   };
@@ -79,6 +82,7 @@ export default function WorkspaceDialog({
       await removeMemberFromWorkspace(workspace.id, userId);
       const updated = await getWorkspaceMembers(workspace.id);
       setMembers(updated);
+      onMembersChange?.(updated);
     });
   };
 
@@ -98,6 +102,7 @@ export default function WorkspaceDialog({
         setInviteName("");
         const updated = await getWorkspaceMembers(workspace.id);
         setMembers(updated);
+        onMembersChange?.(updated);
       }
     });
   };
@@ -166,8 +171,8 @@ export default function WorkspaceDialog({
               })}
             </div>
 
-            {/* メール招待（ownerのみ） */}
-            {isOwner && <div className="border-t border-gray-100 pt-3">
+            {/* メール招待（ownerのみ、個人ワークスペースは非表示） */}
+            {isOwner && !workspace.is_personal && <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center gap-2 mb-2">
                 <Mail className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs font-medium text-gray-500">メールで招待</span>

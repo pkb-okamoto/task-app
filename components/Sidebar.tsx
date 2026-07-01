@@ -15,11 +15,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { createWorkspace, deleteWorkspace } from "@/lib/actions/workspaces";
-import { type Workspace } from "@/lib/types";
+import { type Workspace, type WorkspaceMember } from "@/lib/types";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SidebarProps {
   workspaces: Workspace[];
   currentWorkspaceId: string | null;
+  workspaceMembers: WorkspaceMember[];
   onSwitch: (workspaceId: string) => void;
   onManage: (workspace: Workspace) => void;
   view?: "board" | "dashboard" | "calendar";
@@ -30,6 +32,7 @@ interface SidebarProps {
 export default function Sidebar({
   workspaces,
   currentWorkspaceId,
+  workspaceMembers,
   onSwitch,
   onManage,
   view = "board",
@@ -140,6 +143,33 @@ export default function Sidebar({
             <Plus className="h-3.5 w-3.5" />
           </button>
         </div>
+
+        {/* オーナー・メンバー情報 */}
+        {workspaceMembers.length > 0 && (
+          <div className="px-2 pt-1 pb-0.5">
+            {/* オーナー名 */}
+            {(() => {
+              const owner = workspaceMembers.find((m) => m.role === "owner");
+              return owner?.user ? (
+                <p className="text-[10px] text-gray-400 mb-1 truncate">
+                  オーナー: {owner.user.name}
+                </p>
+              ) : null;
+            })()}
+            {/* メンバーアバター一覧 */}
+            <div className="flex items-center gap-0.5 flex-wrap">
+              {workspaceMembers.map((m) => (
+                <Avatar key={m.user_id} className="h-5 w-5" title={m.user?.name}>
+                  <AvatarImage src={m.user?.avatar_url ?? ""} />
+                  <AvatarFallback className="text-[8px] bg-blue-100 text-blue-700">
+                    {m.user?.name?.charAt(0) ?? "?"}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              <span className="text-[10px] text-gray-400 ml-0.5">{workspaceMembers.length}人</span>
+            </div>
+          </div>
+        )}
 
         {/* 新規ワークスペース作成フォーム */}
         {creating && (
