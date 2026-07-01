@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { type Workspace, type WorkspaceMember, type User } from "@/lib/types";
 
 // ============================================================
@@ -101,9 +102,13 @@ export async function deleteWorkspace(workspaceId: string) {
 // ワークスペースのメンバー一覧を取得
 // ============================================================
 export async function getWorkspaceMembers(workspaceId: string): Promise<WorkspaceMember[]> {
-  const supabase = await createClient();
+  // RLSをバイパスして全メンバーを取得
+  const supabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 
-  // workspace_membersのuser_idでusersを別クエリで取得
   const { data: members, error } = await supabase
     .from("workspace_members")
     .select("workspace_id, user_id, role")
