@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getWorkspaceMembers, removeMemberFromWorkspace } from "@/lib/actions/workspaces";
 import { inviteMember } from "@/lib/actions/invite";
+import { getUserEmails } from "@/lib/actions/users";
 import { type Workspace, type WorkspaceMember } from "@/lib/types";
 
 interface MemberListProps {
@@ -20,6 +21,7 @@ const roleLabel = (role: string) => (role === "owner" ? "オーナー" : "メン
 
 export default function MemberList({ workspace, allUsers, currentUserId, onMembersChange }: MemberListProps) {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
@@ -30,8 +32,12 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
 
   useEffect(() => {
     if (workspace) {
-      getWorkspaceMembers(workspace.id).then((m) => {
+      Promise.all([
+        getWorkspaceMembers(workspace.id),
+        getUserEmails(),
+      ]).then(([m, emails]) => {
         setMembers(m);
+        setEmailMap(emails);
         onMembersChange?.(m);
       });
     }
@@ -82,7 +88,7 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
         {/* タイトル */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-semibold text-gray-900">メンバー</h1>
-          {isOwner && !showInviteForm && (
+          {!showInviteForm && (
             <button
               className="flex items-center gap-2 text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg font-medium transition-colors"
               onClick={() => setShowInviteForm(true)}
@@ -94,7 +100,7 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
         </div>
 
         {/* 招待フォーム */}
-        {isOwner && showInviteForm && (
+        {showInviteForm && (
           <div className="mb-6 p-4 border border-blue-100 bg-blue-50 rounded-xl space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Mail className="h-4 w-4 text-blue-600" />
@@ -145,7 +151,7 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
         {/* テーブルヘッダー */}
         <div className="flex items-center px-3 py-2 border-b border-gray-200 mb-1">
           <span className="text-xs font-medium text-gray-400 flex-1">名前</span>
-          <span className="text-xs font-medium text-gray-400 w-28">役割</span>
+          <span className="text-xs font-medium text-gray-400 w-24">役割</span>
           {isOwner && <span className="w-8" />}
         </div>
 
@@ -153,6 +159,7 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
         <div className="divide-y divide-gray-100">
           {filteredMembers.map((m) => {
             const user = m.user ?? allUsers.find((u) => u.id === m.user_id);
+            const email = emailMap[m.user_id] ?? "";
             return (
               <div key={m.user_id} className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors">
                 <Avatar className="h-8 w-8 shrink-0">
@@ -161,10 +168,11 @@ export default function MemberList({ workspace, allUsers, currentUserId, onMembe
                     {user?.name?.charAt(0) ?? "?"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="flex-1 text-sm font-medium text-gray-800 truncate">
-                  {user?.name ?? "不明"}
-                </span>
-                <span className="text-sm text-gray-500 w-28">{roleLabel(m.role)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{user?.name ?? "不明"}</p>
+                  {email && <p className="text-xs text-gray-400 truncate">{email}</p>}
+                </div>
+                <span className="text-sm text-gray-500 w-24">{roleLabel(m.role)}</span>
                 {isOwner && m.user_id !== currentUserId && m.role !== "owner" ? (
                   <button
                     className="w-8 flex justify-center p-1 rounded hover:bg-red-50"
