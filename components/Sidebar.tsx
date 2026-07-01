@@ -128,7 +128,10 @@ export default function Sidebar({
       {/* コンテンツセクション */}
       <div className="flex-1 px-2 py-2">
         {/* ホーム */}
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-200 text-left text-sm text-gray-600 transition-colors mb-0.5">
+        <button
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors mb-0.5 ${view === "dashboard" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-200"}`}
+          onClick={() => onViewChange?.("dashboard")}
+        >
           <Home className="h-3.5 w-3.5 shrink-0" />
           <span>ホーム</span>
         </button>

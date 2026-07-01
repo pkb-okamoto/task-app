@@ -37,7 +37,7 @@ export default function WorkspaceRoot({
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
-  const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("board");
+  const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("dashboard");
   const [, startTransition] = useTransition();
 
   // 初期メンバー取得
