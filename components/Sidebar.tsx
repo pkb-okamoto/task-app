@@ -16,12 +16,11 @@ import {
   Users,
 } from "lucide-react";
 import { createWorkspace, deleteWorkspace } from "@/lib/actions/workspaces";
-import { type Workspace, type WorkspaceMember } from "@/lib/types";
+import { type Workspace } from "@/lib/types";
 
 interface SidebarProps {
   workspaces: Workspace[];
   currentWorkspaceId: string | null;
-  workspaceMembers: WorkspaceMember[];
   onSwitch: (workspaceId: string) => void;
   onManage: (workspace: Workspace) => void;
   onPrefetch: (workspaceId: string) => void;
@@ -33,7 +32,6 @@ interface SidebarProps {
 export default function Sidebar({
   workspaces,
   currentWorkspaceId,
-  workspaceMembers,
   onSwitch,
   onManage,
   onPrefetch,
@@ -52,10 +50,16 @@ export default function Sidebar({
     const trimmed = newName.trim();
     if (!trimmed) return;
     startTransition(async () => {
-      const ws = await createWorkspace(trimmed);
-      setNewName("");
-      setCreating(false);
-      onSwitch(ws.id);
+      try {
+        const ws = await createWorkspace(trimmed);
+        setNewName("");
+        setCreating(false);
+        onSwitch(ws.id);
+      } catch {
+        alert("ワークスペースの作成に失敗しました");
+        setCreating(false);
+        setNewName("");
+      }
     });
   };
 
@@ -63,8 +67,12 @@ export default function Sidebar({
     setMenuOpenId(null);
     if (!confirm(`「${ws.name}」を削除しますか？`)) return;
     startTransition(async () => {
-      await deleteWorkspace(ws.id);
-      onWorkspaceDeleted(ws.id);
+      try {
+        await deleteWorkspace(ws.id);
+        onWorkspaceDeleted(ws.id);
+      } catch {
+        alert("ワークスペースの削除に失敗しました");
+      }
     });
   };
 

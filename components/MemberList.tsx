@@ -32,7 +32,7 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
 
   useEffect(() => {
     getUserEmails().then(setEmailMap);
-  }, [allUsers]);
+  }, []);
 
   if (!workspace) return null;
 

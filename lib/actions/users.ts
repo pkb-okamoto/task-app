@@ -32,6 +32,10 @@ export async function getUsers(): Promise<User[]> {
 // ユーザーのメールアドレス一覧取得（adminクライアント使用）
 // ============================================================
 export async function getUserEmails(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
   const admin = getAdmin();
   const { data, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
   if (error) return {};
@@ -51,13 +55,12 @@ export async function deleteUser(targetUserId: string): Promise<{ error?: string
 
   const admin = getAdmin();
 
-  // usersテーブルから削除
-  const { error: dbError } = await admin.from("users").delete().eq("id", targetUserId);
-  if (dbError) return { error: dbError.message };
-
-  // auth.usersから削除（workspace_membersはCASCADEで自動削除）
+  // auth.usersから先に削除（CASCADEでworkspace_membersも自動削除）
   const { error: authError } = await admin.auth.admin.deleteUser(targetUserId);
   if (authError) return { error: authError.message };
+
+  // usersテーブルを削除（CASCADE未設定の場合の保険）
+  await admin.from("users").delete().eq("id", targetUserId);
 
   revalidatePath("/");
   return {};

@@ -14,6 +14,8 @@ import { getGroups } from "@/lib/actions/groups";
 import { WorkspaceContext } from "@/lib/workspace-context";
 import { type Group, type Task, type User, type Workspace, type WorkspaceMember } from "@/lib/types";
 
+// WorkspaceMember は WorkspaceDialog / prefetchedMembers 型で使用
+
 interface WorkspaceRootProps {
   currentUser: User | null;
   initialTasks: Task[];
@@ -37,12 +39,17 @@ export default function WorkspaceRoot({
   );
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
-  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>(users);
   const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("dashboard");
   const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [prefetchedMembers, setPrefetchedMembers] = useState<WorkspaceMember[] | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // ユーザー削除後にallUsersを更新
+  const handleUserDeleted = (userId: string) => {
+    setAllUsers((prev) => prev.filter((u) => u.id !== userId));
+  };
 
   // ワークスペースIDごとにメンバーをキャッシュ
   const membersCache = useRef<Map<string, WorkspaceMember[]>>(new Map());
@@ -118,7 +125,6 @@ export default function WorkspaceRoot({
     if (manageTarget) {
       membersCache.current.set(manageTarget.id, members);
     }
-    setWorkspaceMembers(members);
   };
 
   return (
@@ -128,7 +134,7 @@ export default function WorkspaceRoot({
         workspaces={workspaces}
         currentWorkspaceId={currentWorkspaceId}
         onWorkspaceSwitch={handleWorkspaceSwitch}
-        allUsers={users}
+        allUsers={allUsers}
         googleConnected={googleConnected}
       />
 
@@ -136,7 +142,6 @@ export default function WorkspaceRoot({
         <Sidebar
           workspaces={workspaces}
           currentWorkspaceId={currentWorkspaceId}
-          workspaceMembers={workspaceMembers}
           onSwitch={handleWorkspaceSwitch}
           onManage={handleManage}
           onPrefetch={handlePrefetch}
@@ -155,14 +160,15 @@ export default function WorkspaceRoot({
           ) : view === "members" ? (
             <MemberList
               workspace={workspaces.find((w) => w.id === currentWorkspaceId) ?? null}
-              allUsers={users}
+              allUsers={allUsers}
               currentUserId={currentUser?.id ?? ""}
+              onUserDeleted={handleUserDeleted}
             />
           ) : (
             <TaskBoard
               initialTasks={tasks}
               initialGroups={groups}
-              users={users}
+              users={allUsers}
               workspaceId={currentWorkspaceId}
             />
           )}
@@ -173,7 +179,7 @@ export default function WorkspaceRoot({
         workspace={manageTarget}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        allUsers={users}
+        allUsers={allUsers}
         currentUserId={currentUser?.id ?? ""}
         initialMembers={prefetchedMembers}
         onMembersChange={handleMembersChange}

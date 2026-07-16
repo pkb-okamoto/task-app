@@ -43,7 +43,9 @@ export default function WorkspaceDialog({
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
-  const [, startTransition] = useTransition();
+  const [renameError, setRenameError] = useState("");
+  const [removeError, setRemoveError] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (open && workspace) {
@@ -55,13 +57,14 @@ export default function WorkspaceDialog({
         // バックグラウンドで最新データに更新
         getWorkspaceMembers(workspace.id).then((fresh) => {
           setMembers(fresh);
-        });
+        }).catch(() => {});
       } else {
         // キャッシュなし：ローディング表示してから取得
         setMembers([]);
         setLoading(true);
         getWorkspaceMembers(workspace.id).then((fresh) => {
           setMembers(fresh);
+        }).catch(() => {}).finally(() => {
           setLoading(false);
         });
       }
@@ -72,6 +75,8 @@ export default function WorkspaceDialog({
       setEditingName(false);
       setInviteError("");
       setInviteSuccess(false);
+      setRenameError("");
+      setRemoveError("");
     }
   }, [open, workspace?.id, initialMembers]);
 
@@ -87,19 +92,29 @@ export default function WorkspaceDialog({
   const handleRenameSave = () => {
     const trimmed = nameValue.trim();
     if (!trimmed || trimmed === workspace.name) { setEditingName(false); return; }
+    setRenameError("");
     startTransition(async () => {
-      await updateWorkspace(workspace.id, trimmed);
-      setEditingName(false);
+      try {
+        await updateWorkspace(workspace.id, trimmed);
+        setEditingName(false);
+      } catch {
+        setRenameError("名前の更新に失敗しました");
+      }
     });
   };
 
   const handleRemoveMember = (userId: string, userName: string) => {
     if (!confirm(`「${userName}」をワークスペースから削除しますか？`)) return;
+    setRemoveError("");
     startTransition(async () => {
-      await removeMemberFromWorkspace(workspace.id, userId);
-      const updated = await getWorkspaceMembers(workspace.id);
-      setMembers(updated);
-      onMembersChange?.(updated);
+      try {
+        await removeMemberFromWorkspace(workspace.id, userId);
+        const updated = await getWorkspaceMembers(workspace.id);
+        setMembers(updated);
+        onMembersChange?.(updated);
+      } catch {
+        setRemoveError("メンバーの削除に失敗しました");
+      }
     });
   };
 
@@ -179,6 +194,7 @@ export default function WorkspaceDialog({
                 )}
               </div>
             )}
+            {renameError && <p className="text-xs text-red-600 mt-1">{renameError}</p>}
           </div>
 
           {/* ── セクション2: メンバー ── */}
@@ -197,6 +213,7 @@ export default function WorkspaceDialog({
               />
             </div>
 
+            {removeError && <p className="text-xs text-red-600 mb-2">{removeError}</p>}
             <div className="divide-y divide-gray-50 max-h-52 overflow-y-auto">
               {loading ? (
                 /* スケルトン */
@@ -276,7 +293,7 @@ export default function WorkspaceDialog({
                     size="sm"
                     className="h-9 px-4"
                     onClick={handleInvite}
-                    disabled={!inviteEmail.trim()}
+                    disabled={isPending || !inviteEmail.trim()}
                   >
                     送信
                   </Button>
