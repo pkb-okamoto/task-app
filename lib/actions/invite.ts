@@ -31,21 +31,32 @@ export async function inviteMember(
 
   if (error) return { error: error.message };
 
+  const userId = data.user.id;
+
   // usersテーブルに仮登録（名前はログイン時に上書きされる）
   const { error: userError } = await admin.from("users").upsert({
-    id: data.user.id,
+    id: userId,
     name: name ?? email.split("@")[0],
     avatar_url: null,
   });
-  if (userError) return { error: "ユーザー登録に失敗しました: " + userError.message };
+  if (userError) {
+    // ロールバック：auth.usersから削除して宙ぶらりを防ぐ
+    await admin.auth.admin.deleteUser(userId);
+    return { error: "ユーザー登録に失敗しました。もう一度お試しください。" };
+  }
 
   // workspace_membersに追加
   const { error: memberError } = await admin.from("workspace_members").upsert({
     workspace_id: workspaceId,
-    user_id: data.user.id,
+    user_id: userId,
     role: "member",
   });
-  if (memberError) return { error: "ワークスペースへの追加に失敗しました: " + memberError.message };
+  if (memberError) {
+    // ロールバック：usersテーブルとauth.usersを削除
+    await admin.from("users").delete().eq("id", userId);
+    await admin.auth.admin.deleteUser(userId);
+    return { error: "ワークスペースへの追加に失敗しました。もう一度お試しください。" };
+  }
 
   return {};
 }
