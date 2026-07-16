@@ -62,9 +62,15 @@ export default function InviteAcceptPage() {
       return;
     }
 
-    // パスワード設定完了後、そのままホームへ遷移
-    setLoading(false);
-    router.push("/");
+    // セッションからメールアドレスを取得して再ログイン（新しいセッションを確立）
+    const { data: { session } } = await supabase.auth.getSession();
+    const email = session?.user?.email;
+    if (email) {
+      await supabase.auth.signInWithPassword({ email, password });
+    }
+
+    // フルリロードでホームへ遷移（サーバー側でセッションを認識させる）
+    window.location.href = "/";
   };
 
   return (
