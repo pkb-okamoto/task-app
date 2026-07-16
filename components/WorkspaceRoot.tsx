@@ -90,6 +90,21 @@ export default function WorkspaceRoot({
     });
   };
 
+  // ワークスペース削除後のstate更新
+  const handleWorkspaceDeleted = (deletedId: string) => {
+    const remaining = workspaces.filter((w) => w.id !== deletedId);
+    setWorkspaces(remaining);
+    if (currentWorkspaceId === deletedId) {
+      if (remaining.length > 0) {
+        handleWorkspaceSwitch(remaining[0].id);
+      } else {
+        setCurrentWorkspaceId(null);
+        setTasks([]);
+        setGroups([]);
+      }
+    }
+  };
+
   // 設定ダイアログを開く（キャッシュがあれば即表示）
   const handleManage = (workspace: Workspace) => {
     const cached = membersCache.current.get(workspace.id) ?? null;
@@ -125,6 +140,7 @@ export default function WorkspaceRoot({
           onSwitch={handleWorkspaceSwitch}
           onManage={handleManage}
           onPrefetch={handlePrefetch}
+          onWorkspaceDeleted={handleWorkspaceDeleted}
           view={view}
           onViewChange={setView}
         />

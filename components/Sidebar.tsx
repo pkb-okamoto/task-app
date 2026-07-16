@@ -25,6 +25,7 @@ interface SidebarProps {
   onSwitch: (workspaceId: string) => void;
   onManage: (workspace: Workspace) => void;
   onPrefetch: (workspaceId: string) => void;
+  onWorkspaceDeleted: (deletedId: string) => void;
   view?: "board" | "dashboard" | "calendar" | "members";
   onViewChange?: (view: "board" | "dashboard" | "calendar" | "members") => void;
 }
@@ -36,6 +37,7 @@ export default function Sidebar({
   onSwitch,
   onManage,
   onPrefetch,
+  onWorkspaceDeleted,
   view = "board",
   onViewChange,
 }: SidebarProps) {
@@ -62,8 +64,7 @@ export default function Sidebar({
     if (!confirm(`「${ws.name}」を削除しますか？`)) return;
     startTransition(async () => {
       await deleteWorkspace(ws.id);
-      const remaining = workspaces.filter((w) => w.id !== ws.id);
-      if (remaining.length > 0) onSwitch(remaining[0].id);
+      onWorkspaceDeleted(ws.id);
     });
   };
 
@@ -135,15 +136,7 @@ export default function Sidebar({
           onClick={() => onViewChange?.("dashboard")}
         >
           <Home className="h-3.5 w-3.5 shrink-0" />
-          <span>ホーム</span>
-        </button>
-
-        <button
-          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors mb-0.5 ${view === "dashboard" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-200"}`}
-          onClick={() => onViewChange?.(view === "dashboard" ? "board" : "dashboard")}
-        >
-          <BarChart2 className="h-3.5 w-3.5 shrink-0" />
-          <span>ダッシュボード</span>
+          <span>ホーム / ダッシュボード</span>
         </button>
 
         <div className="mt-2">

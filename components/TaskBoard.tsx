@@ -27,10 +27,13 @@ interface TaskBoardProps {
 
 // タスクボードメインコンポーネント（ワークスペース対応版）
 export default function TaskBoard({ initialTasks, initialGroups, users, workspaceId }: TaskBoardProps) {
+  const [isPending, startTransition] = useTransition();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [groups, setGroups] = useState<Group[]>(initialGroups);
 
-  // refresh() 後に親から新しいタスクが渡されたら同期
+  // refresh() 後に親から新しいタスク・グループが渡されたら同期
   useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
+  useEffect(() => { setGroups(initialGroups); }, [initialGroups]);
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
@@ -114,7 +117,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
     if (!activeTask) return;
 
     // over.id がグループIDの場合（グループの空き領域にドロップ）
-    const overGroup = initialGroups.find((g) => g.id === over.id);
+    const overGroup = groups.find((g) => g.id === over.id);
     if (overGroup) {
       if (activeTask.group_id === overGroup.id) {
         // 同一グループへのドロップ：現在の並び順をDBに保存
@@ -149,7 +152,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
       startTransition(async () => { await updateTaskPositions(updates); });
     } else {
       // 別グループへの移動
-      const overGroup = initialGroups.find((g) => g.id === overTask.group_id);
+      const overGroup = groups.find((g) => g.id === overTask.group_id);
       if (!overGroup) return;
 
       const overGroupTasks = tasks.filter((t) => t.group_id === overTask.group_id && !t.parent_task_id);
@@ -176,7 +179,6 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
       startTransition(async () => { await updateTaskPositions(updates); });
     }
   };
-  const [isPending, startTransition] = useTransition();
 
   // タスク編集ダイアログ
   const [editTarget, setEditTarget] = useState<Task | null>(null);
@@ -300,6 +302,9 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
         group_status: group.name,
       }));
       await updateTaskPositions(updates);
+      setTasks((prev) => prev.map((t) =>
+        selectedIds.has(t.id) ? { ...t, group_id: group.id, group_status: group.name } : t
+      ));
       clearSelection();
     });
   };

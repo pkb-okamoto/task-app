@@ -74,7 +74,7 @@ export default function WorkspaceDialog({
       setInviteError("");
       setInviteSuccess(false);
     }
-  }, [open, workspace?.id]);
+  }, [open, workspace?.id, initialMembers]);
 
   if (!open || !workspace) return null;
 
