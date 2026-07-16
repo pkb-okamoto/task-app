@@ -18,18 +18,28 @@ export default function InviteAcceptPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // /auth/callback でセッション確立済みのため getSession で確認
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    // URLハッシュにエラーが含まれている場合は表示
+    const hash = window.location.hash;
+    if (hash.includes("error=")) {
+      const params = new URLSearchParams(hash.replace("#", ""));
+      const desc = params.get("error_description");
+      setError(desc ? decodeURIComponent(desc.replace(/\+/g, " ")) : "招待リンクが無効か期限切れです。再度招待を依頼してください。");
+      return;
+    }
+
+    // onAuthStateChange でセッション確立を待つ（ハッシュトークン処理）
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
         setReady(true);
-      } else {
-        // セッションがない場合はハッシュからの旧形式も試みる
-        supabase.auth.onAuthStateChange((event, session) => {
-          if (event === "SIGNED_IN" && session) setReady(true);
-        });
-        setError("招待リンクが無効か期限切れです。再度招待を依頼してください。");
       }
     });
+
+    // 既存セッションも確認
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,7 +84,10 @@ export default function InviteAcceptPage() {
         )}
 
         {error && (
-          <p className="text-center text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">{error}</p>
+          <div className="text-center">
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3 mb-4">{error}</p>
+            <p className="text-sm text-gray-500">管理者に再招待を依頼してください。</p>
+          </div>
         )}
 
         {ready && (
