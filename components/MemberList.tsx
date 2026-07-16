@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Mail, Search, Trash2, UserPlus } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { inviteMember } from "@/lib/actions/invite";
 import { getUserEmails, deleteUser } from "@/lib/actions/users";
 import { type Workspace } from "@/lib/types";
 
@@ -20,11 +17,6 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
   const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [localUsers, setLocalUsers] = useState(allUsers);
   const [search, setSearch] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteError, setInviteError] = useState("");
-  const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [tempPassword, setTempPassword] = useState("");
-  const [showInviteForm, setShowInviteForm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -55,79 +47,13 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
     });
   };
 
-  const handleInvite = () => {
-    const email = inviteEmail.trim();
-    if (!email) return;
-    setInviteError("");
-    setInviteSuccess(false);
-    setTempPassword("");
-    startTransition(async () => {
-      const result = await inviteMember(workspace.id, email);
-      if (result.error) {
-        setInviteError(result.error);
-      } else {
-        setInviteSuccess(true);
-        setTempPassword(result.tempPassword ?? "");
-        setInviteEmail("");
-      }
-    });
-  };
-
   return (
     <div className="flex-1 overflow-y-auto bg-white">
       <div className="max-w-2xl mx-auto px-8 py-8">
         {/* タイトル */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
           <h1 className="text-xl font-semibold text-gray-900">メンバー</h1>
-          {!showInviteForm && (
-            <button
-              className="flex items-center gap-2 text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg font-medium transition-colors"
-              onClick={() => setShowInviteForm(true)}
-            >
-              <UserPlus className="h-4 w-4" />
-              メンバーを招待
-            </button>
-          )}
         </div>
-
-        {/* 招待フォーム */}
-        {showInviteForm && (
-          <div className="mb-6 p-4 border border-blue-100 bg-blue-50 rounded-xl space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Mail className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">メールで招待</span>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="メールアドレス"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleInvite(); }}
-                className="text-sm h-9 flex-1 bg-white"
-              />
-              <Button size="sm" className="h-9 px-4" onClick={handleInvite}
-                disabled={isPending || !inviteEmail.trim()}>
-                {isPending ? "送信中..." : "送信"}
-              </Button>
-            </div>
-            {inviteError && <p className="text-xs text-red-600">{inviteError}</p>}
-            {inviteSuccess && tempPassword && (
-              <div className="text-xs bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
-                <p className="text-green-700 font-medium">ユーザーを追加しました</p>
-                <p className="text-gray-600">以下の仮パスワードをユーザーに伝えてください：</p>
-                <p className="font-mono bg-white border border-green-300 rounded px-2 py-1 text-sm text-gray-900 select-all">{tempPassword}</p>
-                <p className="text-gray-500">ログイン後、プロフィールからパスワードを変更できます。</p>
-              </div>
-            )}
-            <button
-              className="text-xs text-gray-400 hover:text-gray-600"
-              onClick={() => { setShowInviteForm(false); setInviteError(""); setInviteSuccess(false); }}
-            >
-              キャンセル
-            </button>
-          </div>
-        )}
 
         {/* 検索 */}
         <div className="relative mb-4">
