@@ -22,6 +22,7 @@ export default function LoginForm() {
   const [resetLoading, setResetLoading] = useState(false);
   const searchParams = useSearchParams();
   const passwordSet = searchParams.get("message") === "password_set";
+  const setupEmail = searchParams.get("email") ?? "";
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +56,48 @@ export default function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  // 招待セットアップモード（?email=xxx が付いている場合）
+  if (setupEmail) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center mb-2">
+          <p className="text-base font-semibold text-gray-900">アカウントのセットアップ</p>
+          <p className="text-sm text-gray-500 mt-1">ワークスペースに招待されました</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm">
+          <p className="font-medium text-gray-800">{setupEmail}</p>
+          <p className="text-gray-500 mt-0.5">のアカウントが作成されています</p>
+        </div>
+        <p className="text-sm text-gray-600">
+          ボタンを押すとパスワード設定メールが届きます。
+        </p>
+        {resetSent ? (
+          <div className="text-center space-y-2">
+            <p className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 px-4 py-3 rounded-lg">
+              メールを送信しました。メール内のリンクからパスワードを設定してください。
+            </p>
+          </div>
+        ) : (
+          <Button
+            className="w-full"
+            disabled={resetLoading}
+            onClick={async () => {
+              setResetLoading(true);
+              const supabase = createClient();
+              await supabase.auth.resetPasswordForEmail(setupEmail, {
+                redirectTo: `${window.location.origin}/invite/accept`,
+              });
+              setResetSent(true);
+              setResetLoading(false);
+            }}
+          >
+            {resetLoading ? "送信中..." : "パスワード設定メールを送信"}
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
