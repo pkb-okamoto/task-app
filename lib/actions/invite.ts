@@ -60,9 +60,9 @@ export async function inviteMember(
     return { error: "ワークスペースへの追加に失敗しました。もう一度お試しください。" };
   }
 
-  // パスワード設定メールを送信（auth/callback経由でinvite/acceptへ）
+  // パスワード設定メールを送信
   const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${appUrl}/auth/callback?next=/invite/accept`,
+    redirectTo: `${appUrl}/invite/accept`,
   });
   if (resetError) {
     await admin.from("users").delete().eq("id", userId);
