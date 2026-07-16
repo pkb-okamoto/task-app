@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Mail, Search, UserPlus } from "lucide-react";
+import { Mail, Search, Trash2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inviteMember } from "@/lib/actions/invite";
-import { getUserEmails } from "@/lib/actions/users";
+import { getUserEmails, deleteUser } from "@/lib/actions/users";
 import { type Workspace } from "@/lib/types";
 
 interface MemberListProps {
   workspace: Workspace | null;
   allUsers: { id: string; name: string; avatar_url: string | null }[];
   currentUserId: string;
+  onUserDeleted?: (userId: string) => void;
 }
 
-export default function MemberList({ workspace, allUsers, currentUserId: _currentUserId }: MemberListProps) {
+export default function MemberList({ workspace, allUsers, currentUserId, onUserDeleted }: MemberListProps) {
   const [emailMap, setEmailMap] = useState<Record<string, string>>({});
+  const [localUsers, setLocalUsers] = useState(allUsers);
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
@@ -26,15 +28,32 @@ export default function MemberList({ workspace, allUsers, currentUserId: _curren
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    setLocalUsers(allUsers);
+  }, [allUsers]);
+
+  useEffect(() => {
     getUserEmails().then(setEmailMap);
   }, [allUsers]);
 
   if (!workspace) return null;
 
-  const filteredUsers = allUsers.filter((u) =>
+  const filteredUsers = localUsers.filter((u) =>
     search === "" || u.name.toLowerCase().includes(search.toLowerCase()) ||
     (emailMap[u.id] ?? "").toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleDelete = (userId: string, userName: string) => {
+    if (!confirm(`「${userName}」のアカウントをアプリから削除しますか？\nこの操作は取り消せません。`)) return;
+    startTransition(async () => {
+      const result = await deleteUser(userId);
+      if (result.error) {
+        alert("削除に失敗しました: " + result.error);
+      } else {
+        setLocalUsers((prev) => prev.filter((u) => u.id !== userId));
+        onUserDeleted?.(userId);
+      }
+    });
+  };
 
   const handleInvite = () => {
     const email = inviteEmail.trim();
@@ -121,14 +140,16 @@ export default function MemberList({ workspace, allUsers, currentUserId: _curren
         </div>
 
         {/* テーブルヘッダー */}
-        <div className="px-3 py-2 border-b border-gray-200 mb-1">
-          <span className="text-xs font-medium text-gray-400">名前</span>
+        <div className="flex items-center px-3 py-2 border-b border-gray-200 mb-1">
+          <span className="text-xs font-medium text-gray-400 flex-1">名前</span>
+          <span className="text-xs font-medium text-gray-400 w-16 text-right">削除</span>
         </div>
 
         {/* メンバー行 */}
         <div className="divide-y divide-gray-100">
           {filteredUsers.map((u) => {
             const email = emailMap[u.id] ?? "";
+            const isSelf = u.id === currentUserId;
             return (
               <div key={u.id} className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors">
                 <Avatar className="h-8 w-8 shrink-0">
@@ -138,15 +159,28 @@ export default function MemberList({ workspace, allUsers, currentUserId: _curren
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">
+                    {u.name}{isSelf && <span className="ml-1.5 text-xs text-gray-400">（自分）</span>}
+                  </p>
                   {email && <p className="text-xs text-gray-400 truncate">{email}</p>}
                 </div>
+                {!isSelf && (
+                  <button
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors shrink-0"
+                    onClick={() => handleDelete(u.id, u.name)}
+                    disabled={isPending}
+                    title="アカウントを削除"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+                {isSelf && <span className="w-9 shrink-0" />}
               </div>
             );
           })}
         </div>
 
-        <p className="text-xs text-gray-400 mt-4">{allUsers.length}人のメンバー</p>
+        <p className="text-xs text-gray-400 mt-4">{localUsers.length}人のメンバー</p>
       </div>
     </div>
   );
