@@ -18,10 +18,17 @@ export default function InviteAcceptPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // URLのhashからセッションを取得（Supabaseが自動でセッションを設定）
+    // /auth/callback でセッション確立済みのため getSession で確認
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-      else setError("招待リンクが無効か期限切れです。再度招待を依頼してください。");
+      if (session) {
+        setReady(true);
+      } else {
+        // セッションがない場合はハッシュからの旧形式も試みる
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "SIGNED_IN" && session) setReady(true);
+        });
+        setError("招待リンクが無効か期限切れです。再度招待を依頼してください。");
+      }
     });
   }, []);
 
@@ -45,8 +52,10 @@ export default function InviteAcceptPage() {
       return;
     }
 
+    // パスワード設定後にサインアウトして再ログインを促す
+    await supabase.auth.signOut();
     setLoading(false);
-    router.push("/");
+    router.push("/login?message=password_set");
   };
 
   return (
@@ -91,7 +100,7 @@ export default function InviteAcceptPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "設定中..." : "パスワードを設定してログイン"}
+              {loading ? "設定中..." : "パスワードを設定する"}
             </Button>
           </form>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedColor, setSelectedColor] = useState("blue");
+  const searchParams = useSearchParams();
+  const passwordSet = searchParams.get("message") === "password_set";
 
   const handleSignIn = async (formData: FormData) => {
     setIsLoading(true);
@@ -37,6 +40,12 @@ export default function LoginForm() {
   };
 
   return (
+    <>
+    {passwordSet && (
+      <p className="text-sm text-green-700 bg-green-50 border border-green-200 px-4 py-3 rounded-lg mb-4 text-center">
+        パスワードを設定しました。メールアドレスとパスワードでログインしてください。
+      </p>
+    )}
     <Tabs defaultValue="login" onValueChange={() => setError(null)}>
       <TabsList className="w-full mb-4">
         <TabsTrigger value="login" className="flex-1">ログイン</TabsTrigger>
@@ -124,5 +133,6 @@ export default function LoginForm() {
         </Card>
       </TabsContent>
     </Tabs>
+    </>
   );
 }
