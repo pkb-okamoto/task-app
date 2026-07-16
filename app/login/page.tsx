@@ -14,8 +14,8 @@ export default function LoginPage() {
           <span className="text-2xl font-bold text-gray-900 tracking-tight">TaskBoard</span>
         </div>
 
-        <RecoveryRedirect />
         <Suspense fallback={null}>
+          <RecoveryRedirect />
           <LoginForm />
         </Suspense>
       </div>
