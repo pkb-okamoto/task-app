@@ -135,14 +135,16 @@ export async function getWorkspaceMembers(workspaceId: string): Promise<Workspac
 // メンバーをIDで追加（usersテーブルから検索）
 // ============================================================
 export async function addMemberToWorkspace(workspaceId: string, userId: string) {
-  const supabase = await createClient();
-
-  const { error } = await supabase.from("workspace_members").insert({
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  const { error } = await admin.from("workspace_members").insert({
     workspace_id: workspaceId,
     user_id: userId,
     role: "member",
   });
-
   if (error) throw new Error(error.message);
   revalidatePath("/");
 }
@@ -151,8 +153,12 @@ export async function addMemberToWorkspace(workspaceId: string, userId: string) 
 // メンバーをワークスペースから削除
 // ============================================================
 export async function removeMemberFromWorkspace(workspaceId: string, userId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  const { error } = await admin
     .from("workspace_members")
     .delete()
     .eq("workspace_id", workspaceId)
