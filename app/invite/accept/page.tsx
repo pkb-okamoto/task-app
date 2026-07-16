@@ -29,7 +29,7 @@ export default function InviteAcceptPage() {
 
     // onAuthStateChange でセッション確立を待つ（ハッシュトークン処理）
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      if ((event === "SIGNED_IN" || event === "PASSWORD_RECOVERY") && session) {
         setReady(true);
       }
     });

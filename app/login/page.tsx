@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { LayoutDashboard } from "lucide-react";
 import LoginForm from "@/components/auth/LoginForm";
+import RecoveryRedirect from "@/components/RecoveryRedirect";
 
 // ログイン・サインアップページ
 export default function LoginPage() {
@@ -13,6 +14,7 @@ export default function LoginPage() {
           <span className="text-2xl font-bold text-gray-900 tracking-tight">TaskBoard</span>
         </div>
 
+        <RecoveryRedirect />
         <Suspense fallback={null}>
           <LoginForm />
         </Suspense>
