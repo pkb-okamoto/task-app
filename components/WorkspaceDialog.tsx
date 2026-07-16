@@ -40,6 +40,7 @@ export default function WorkspaceDialog({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [tempPassword, setTempPassword] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -123,12 +124,14 @@ export default function WorkspaceDialog({
     if (!email) return;
     setInviteError("");
     setInviteSuccess(false);
+    setTempPassword("");
     startTransition(async () => {
       const result = await inviteMember(workspace.id, email);
       if (result.error) {
         setInviteError(result.error);
       } else {
         setInviteSuccess(true);
+        setTempPassword(result.tempPassword ?? "");
         setInviteEmail("");
         const updated = await getWorkspaceMembers(workspace.id);
         setMembers(updated);
@@ -299,7 +302,14 @@ export default function WorkspaceDialog({
                   </Button>
                 </div>
                 {inviteError && <p className="text-xs text-red-600">{inviteError}</p>}
-                {inviteSuccess && <p className="text-xs text-green-600">招待メールを送信しました</p>}
+                {inviteSuccess && tempPassword && (
+                  <div className="text-xs bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
+                    <p className="text-green-700 font-medium">ユーザーを追加しました</p>
+                    <p className="text-gray-600">以下の仮パスワードをユーザーに伝えてください：</p>
+                    <p className="font-mono bg-white border border-green-300 rounded px-2 py-1 text-sm text-gray-900 select-all">{tempPassword}</p>
+                    <p className="text-gray-500">ログイン後、プロフィールからパスワードを変更できます。</p>
+                  </div>
+                )}
                 <button
                   className="text-xs text-gray-400 hover:text-gray-600"
                   onClick={() => {
