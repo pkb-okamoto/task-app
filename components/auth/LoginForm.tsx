@@ -29,7 +29,7 @@ export default function LoginForm() {
     const supabase = createClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app";
     await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${appUrl}/invite/accept`,
+      redirectTo: `${appUrl}/auth/callback?next=/invite/accept`,
     });
     setResetSent(true);
     setResetLoading(false);
