@@ -21,7 +21,6 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
   const [localUsers, setLocalUsers] = useState(allUsers);
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -57,18 +56,16 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
 
   const handleInvite = () => {
     const email = inviteEmail.trim();
-    const name = inviteName.trim();
-    if (!email || !name) return;
+    if (!email) return;
     setInviteError("");
     setInviteSuccess(false);
     startTransition(async () => {
-      const result = await inviteMember(workspace.id, email, name);
+      const result = await inviteMember(workspace.id, email);
       if (result.error) {
         setInviteError(result.error);
       } else {
         setInviteSuccess(true);
         setInviteEmail("");
-        setInviteName("");
       }
     });
   };
@@ -97,12 +94,6 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
               <Mail className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-700">メールで招待</span>
             </div>
-            <Input
-              placeholder="名前"
-              value={inviteName}
-              onChange={(e) => setInviteName(e.target.value)}
-              className="text-sm h-9 bg-white"
-            />
             <div className="flex gap-2">
               <Input
                 type="email"
@@ -113,7 +104,7 @@ export default function MemberList({ workspace, allUsers, currentUserId, onUserD
                 className="text-sm h-9 flex-1 bg-white"
               />
               <Button size="sm" className="h-9 px-4" onClick={handleInvite}
-                disabled={isPending || !inviteEmail.trim() || !inviteName.trim()}>
+                disabled={isPending || !inviteEmail.trim()}>
                 {isPending ? "送信中..." : "送信"}
               </Button>
             </div>
