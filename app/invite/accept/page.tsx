@@ -27,6 +27,19 @@ export default function InviteAcceptPage() {
       return;
     }
 
+    // PKCEコード（?code=xxx）がある場合は先にセッション交換
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setError("招待リンクが無効か期限切れです。再度招待を依頼してください。");
+        } else {
+          setReady(true);
+        }
+      });
+      return;
+    }
+
     // onAuthStateChange でセッション確立を待つ（ハッシュトークン処理）
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "PASSWORD_RECOVERY") && session) {
