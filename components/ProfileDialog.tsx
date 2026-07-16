@@ -28,6 +28,34 @@ export default function ProfileDialog({ open, onOpenChange, currentUser, googleC
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage("パスワードが一致しません");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage("パスワードは8文字以上で入力してください");
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordMessage(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      setPasswordMessage(error.message);
+    } else {
+      setPasswordMessage("パスワードを変更しました");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+    setPasswordLoading(false);
+  };
+
   if (!open) return null;
 
   const colorStyle = getColorStyle(color);
@@ -160,6 +188,40 @@ export default function ProfileDialog({ open, onOpenChange, currentUser, googleC
             <p className="text-xs text-gray-400">
               選択中：{USER_COLORS.find((c) => c.value === color)?.label}
             </p>
+          </div>
+
+          {/* パスワード変更 */}
+          <div className="grid gap-2">
+            <Label>パスワード変更</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="新しいパスワード（8文字以上）"
+            />
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="確認用パスワード"
+            />
+            {passwordMessage && (
+              <p className={`text-sm px-3 py-2 rounded-md ${
+                passwordMessage.includes("変更しました")
+                  ? "text-green-700 bg-green-50"
+                  : "text-red-600 bg-red-50"
+              }`}>
+                {passwordMessage}
+              </p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePasswordChange}
+              disabled={passwordLoading || !newPassword || !confirmPassword}
+            >
+              {passwordLoading ? "変更中..." : "パスワードを変更する"}
+            </Button>
           </div>
 
           {/* Googleカレンダー連携 */}
