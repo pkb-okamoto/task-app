@@ -62,10 +62,9 @@ export default function InviteAcceptPage() {
       return;
     }
 
-    // パスワード設定後にサインアウトして再ログインを促す
-    await supabase.auth.signOut();
+    // パスワード設定完了後、そのままホームへ遷移
     setLoading(false);
-    router.push("/login?message=password_set");
+    router.push("/");
   };
 
   return (
