@@ -9,14 +9,31 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { signIn, signUp } from "@/lib/actions/auth";
 import { USER_COLORS } from "@/lib/user-colors";
+import { createClient } from "@/lib/supabase/client";
 
 // ログイン・サインアップ切り替えフォーム
 export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedColor, setSelectedColor] = useState("blue");
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const searchParams = useSearchParams();
   const passwordSet = searchParams.get("message") === "password_set";
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    const supabase = createClient();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app";
+    await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${appUrl}/invite/accept`,
+    });
+    setResetSent(true);
+    setResetLoading(false);
+  };
 
   const handleSignIn = async (formData: FormData) => {
     setIsLoading(true);
@@ -73,7 +90,38 @@ export default function LoginForm() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "ログイン中..." : "ログイン"}
               </Button>
+              <button
+                type="button"
+                onClick={() => setShowReset(true)}
+                className="text-xs text-gray-400 hover:text-gray-600 w-full text-center"
+              >
+                パスワードを忘れた方はこちら
+              </button>
             </form>
+
+            {showReset && (
+              <div className="mt-4 border-t pt-4">
+                {resetSent ? (
+                  <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-md text-center">
+                    パスワードリセットメールを送信しました。メールをご確認ください。
+                  </p>
+                ) : (
+                  <form onSubmit={handlePasswordReset} className="grid gap-3">
+                    <p className="text-sm text-gray-600">登録済みのメールアドレスを入力してください。</p>
+                    <Input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                    />
+                    <Button type="submit" variant="outline" className="w-full" disabled={resetLoading}>
+                      {resetLoading ? "送信中..." : "リセットメールを送信"}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </TabsContent>
