@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { LayoutDashboard } from "lucide-react";
 import LoginForm from "@/components/auth/LoginForm";
 
@@ -12,7 +13,9 @@ export default function LoginPage() {
           <span className="text-2xl font-bold text-gray-900 tracking-tight">TaskBoard</span>
         </div>
 
-        <LoginForm />
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
