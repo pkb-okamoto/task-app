@@ -55,8 +55,13 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
   const handleBulkDelete = () => {
     if (!confirm(`${selectedIds.size}件のタスクを削除しますか？`)) return;
     startTransition(async () => {
-      await Promise.all([...selectedIds].map((id) => deleteTask(id)));
-      clearSelection();
+      try {
+        await Promise.all([...selectedIds].map((id) => deleteTask(id)));
+        clearSelection();
+      } catch {
+        alert("削除に失敗したタスクがあります");
+        clearSelection();
+      }
     });
   };
 
@@ -301,16 +306,20 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
         group_id: group.id,
         group_status: group.name,
       }));
-      await updateTaskPositions(updates);
-      setTasks((prev) => prev.map((t) =>
-        selectedIds.has(t.id) ? { ...t, group_id: group.id, group_status: group.name } : t
-      ));
-      clearSelection();
+      try {
+        await updateTaskPositions(updates);
+        setTasks((prev) => prev.map((t) =>
+          selectedIds.has(t.id) ? { ...t, group_id: group.id, group_status: group.name } : t
+        ));
+        clearSelection();
+      } catch {
+        alert("グループ移動に失敗しました");
+      }
     });
   };
 
   const handleQuickAdd = () => {
-    setCreateGroupId(initialGroups[0]?.id ?? null);
+    setCreateGroupId(groups[0]?.id ?? null);
     setCreateParentId(null);
     setCreateOpen(true);
   };
@@ -527,7 +536,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
           {viewMode === "kanban" && (
             <KanbanBoard
               tasks={sortTasks(tasks.filter((t) => matchesSearch(t)))}
-              groups={initialGroups}
+              groups={groups}
               onAddTask={handleAddTask}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -537,15 +546,15 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
           {/* テーブルビュー */}
           {viewMode === "table" && (
             <DndContext id="task-board-dnd" sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-            <SortableContext items={[...initialGroups.flatMap((g) => tasksByGroup(g.id)), ...ungroupedTasks].map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={[...groups.flatMap((g) => tasksByGroup(g.id)), ...ungroupedTasks].map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <>
-              {initialGroups.map((group) => (
+              {groups.map((group) => (
                 <TaskGroup
                   key={group.id}
                   group={group}
                   tasks={tasksByGroup(group.id)}
                   users={users}
-                  groups={initialGroups}
+                  groups={groups}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
                   onAddTask={handleAddTask}
@@ -585,7 +594,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
               )}
 
               {/* グループがない場合の案内 */}
-              {initialGroups.length === 0 && (
+              {groups.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                   <p className="text-sm mb-3">グループがありません</p>
                   <Button variant="outline" size="sm" onClick={handleAddGroup}>
@@ -626,7 +635,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
               グループへ移動
             </button>
             <div className="absolute bottom-full mb-2 left-0 hidden group-hover/move:block bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px]">
-              {initialGroups.map((g) => (
+              {groups.map((g) => (
                 <button
                   key={g.id}
                   onClick={() => handleBulkMove(g)}
@@ -664,7 +673,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
         defaultGroupId={createGroupId}
         parentTaskId={createParentId}
         users={users}
-        groups={initialGroups}
+        groups={groups}
         workspaceId={workspaceId}
       />
 
@@ -674,7 +683,7 @@ export default function TaskBoard({ initialTasks, initialGroups, users, workspac
         onOpenChange={setEditOpen}
         task={editTarget}
         users={users}
-        groups={initialGroups}
+        groups={groups}
       />
 
       {/* 削除確認ダイアログ */}

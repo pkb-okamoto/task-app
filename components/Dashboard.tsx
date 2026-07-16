@@ -24,8 +24,14 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const PROGRESS_COLORS = ["#6b7280", "#3b82f6", "#22c55e"];
 
+// "YYYY-MM-DD" をローカル時刻の0時として解釈（UTC解釈による1日ズレを防ぐ）
+const parseLocalDate = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 export default function Dashboard({ tasks, groups, users }: DashboardProps) {
-  const rootTasks = tasks.filter((t) => !t.parent_task_id);
+  const rootTasks = useMemo(() => tasks.filter((t) => !t.parent_task_id), [tasks]);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -38,7 +44,7 @@ export default function Dashboard({ tasks, groups, users }: DashboardProps) {
     const completed = rootTasks.filter((t) => t.progress === 100).length;
     const overdue = rootTasks.filter((t) => {
       if (!t.due_date || t.progress === 100) return false;
-      const due = new Date(t.due_date);
+      const due = parseLocalDate(t.due_date);
       due.setHours(0, 0, 0, 0);
       return due < today;
     }).length;
@@ -76,7 +82,7 @@ export default function Dashboard({ tasks, groups, users }: DashboardProps) {
       completed: assigned.filter((t) => t.progress === 100).length,
       overdue: assigned.filter((t) => {
         if (!t.due_date || t.progress === 100) return false;
-        const due = new Date(t.due_date);
+        const due = parseLocalDate(t.due_date);
         due.setHours(0, 0, 0, 0);
         return due < today;
       }).length,
@@ -87,7 +93,7 @@ export default function Dashboard({ tasks, groups, users }: DashboardProps) {
   const upcomingTasks = useMemo(() => rootTasks
     .filter((t) => {
       if (!t.due_date || t.progress === 100) return false;
-      const due = new Date(t.due_date);
+      const due = parseLocalDate(t.due_date);
       due.setHours(0, 0, 0, 0);
       const diff = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       return diff >= 0 && diff <= 7;
@@ -179,8 +185,7 @@ export default function Dashboard({ tasks, groups, users }: DashboardProps) {
           ) : (
             <div className="space-y-2">
               {upcomingTasks.map((t) => {
-                const due = new Date(t.due_date!);
-                due.setHours(0, 0, 0, 0);
+                const due = parseLocalDate(t.due_date!);
                 const diff = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                 return (
                   <div key={t.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">

@@ -94,7 +94,7 @@ export default function Header({
               設定
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 text-red-600" onClick={() => signOut()}>
+            <DropdownMenuItem className="gap-2 text-red-600" onClick={() => signOut().catch(() => alert("ログアウトに失敗しました"))}>
               <LogOut className="h-4 w-4" />
               ログアウト
             </DropdownMenuItem>

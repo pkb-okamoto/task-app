@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import WorkspaceRoot from "@/components/WorkspaceRoot";
 import BrowserNotification from "@/components/BrowserNotification";
 import { getTasks } from "@/lib/actions/tasks";
@@ -45,7 +46,7 @@ export default async function Home() {
     tasks = tasksResult;
     groups = groupsResult;
   } catch (err) {
-    if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
+    if (isRedirectError(err)) throw err;
     console.warn("Supabase未接続: モックUIで表示します");
   }
 

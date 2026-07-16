@@ -20,7 +20,6 @@ import { type Group, type Task, type User } from "@/lib/types";
 interface TaskGroupProps {
   group: Group;
   tasks: Task[];
-  allTaskIds?: string[];
   users?: User[];
   groups?: Group[];
   selectedIds?: Set<string>;
@@ -36,7 +35,6 @@ interface TaskGroupProps {
 export default function TaskGroup({
   group,
   tasks,
-  allTaskIds,
   users = [],
   groups = [],
   selectedIds,
@@ -56,8 +54,12 @@ export default function TaskGroup({
   const handleDeleteGroup = () => {
     if (!confirm(`「${group.name}」を削除しますか？\nこのグループのタスクはグループなしになります。`)) return;
     startTransition(async () => {
-      await deleteGroup(group.id);
-      refresh();
+      try {
+        await deleteGroup(group.id);
+        refresh();
+      } catch {
+        alert("グループの削除に失敗しました");
+      }
     });
   };
 
