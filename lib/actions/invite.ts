@@ -22,15 +22,10 @@ export async function inviteMember(
   if (!user) return { error: "未ログイン" };
 
   const admin = getAdminClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app";
 
-  // ユーザーを作成（メール確認済み、仮パスワード）
-  const tempPassword = crypto.randomUUID();
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password: tempPassword,
-    email_confirm: true,
-    user_metadata: { name, workspace_id: workspaceId },
+  // 招待メール送信（redirectToなし→ Site URLに遷移→/loginにハッシュ付きでリダイレクト）
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { name, workspace_id: workspaceId },
   });
 
   if (error) return { error: error.message };
@@ -58,16 +53,6 @@ export async function inviteMember(
     await admin.from("users").delete().eq("id", userId);
     await admin.auth.admin.deleteUser(userId);
     return { error: "ワークスペースへの追加に失敗しました。もう一度お試しください。" };
-  }
-
-  // パスワード設定メールを送信
-  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${appUrl}/invite/accept`,
-  });
-  if (resetError) {
-    await admin.from("users").delete().eq("id", userId);
-    await admin.auth.admin.deleteUser(userId);
-    return { error: "招待メールの送信に失敗しました。もう一度お試しください。" };
   }
 
   return {};
