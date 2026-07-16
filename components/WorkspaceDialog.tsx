@@ -38,7 +38,6 @@ export default function WorkspaceDialog({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -106,18 +105,16 @@ export default function WorkspaceDialog({
 
   const handleInvite = () => {
     const email = inviteEmail.trim();
-    const name = inviteName.trim();
-    if (!email || !name) return;
+    if (!email) return;
     setInviteError("");
     setInviteSuccess(false);
     startTransition(async () => {
-      const result = await inviteMember(workspace.id, email, name);
+      const result = await inviteMember(workspace.id, email);
       if (result.error) {
         setInviteError(result.error);
       } else {
         setInviteSuccess(true);
         setInviteEmail("");
-        setInviteName("");
         const updated = await getWorkspaceMembers(workspace.id);
         setMembers(updated);
         onMembersChange?.(updated);
@@ -266,12 +263,6 @@ export default function WorkspaceDialog({
                   <Mail className="h-4 w-4 text-blue-500" />
                   <span className="text-sm font-medium text-gray-700">招待メールを送信</span>
                 </div>
-                <Input
-                  placeholder="名前"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  className="text-sm h-9"
-                />
                 <div className="flex gap-2">
                   <Input
                     type="email"
@@ -285,7 +276,7 @@ export default function WorkspaceDialog({
                     size="sm"
                     className="h-9 px-4"
                     onClick={handleInvite}
-                    disabled={!inviteEmail.trim() || !inviteName.trim()}
+                    disabled={!inviteEmail.trim()}
                   >
                     送信
                   </Button>
