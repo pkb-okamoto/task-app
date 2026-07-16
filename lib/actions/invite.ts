@@ -11,23 +11,29 @@ function getAdminClient() {
   });
 }
 
-// メンバーを招待（Supabase標準招待メール方式）
+// メンバーを招待（アカウント作成 + セットアップURL返却方式）
 export async function inviteMember(
   workspaceId: string,
   email: string,
   name?: string
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; setupUrl?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "未ログイン" };
 
   const admin = getAdminClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app";
 
-  // Supabase標準の招待メールを送信（/invite/accept に直接リダイレクト）
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${appUrl}/invite/accept`,
-    data: { name, workspace_id: workspaceId },
+  // ダミーパスワードでアカウント作成（メール確認済み）
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const tempPassword = Array.from({ length: 16 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { name, workspace_id: workspaceId },
   });
 
   if (error) return { error: error.message };
@@ -57,5 +63,6 @@ export async function inviteMember(
     return { error: "ワークスペースへの追加に失敗しました。もう一度お試しください。" };
   }
 
-  return {};
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app";
+  return { setupUrl: `${appUrl}/invite/setup?email=${encodeURIComponent(email)}` };
 }

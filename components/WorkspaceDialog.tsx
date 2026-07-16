@@ -39,7 +39,8 @@ export default function WorkspaceDialog({
   const [search, setSearch] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteError, setInviteError] = useState("");
-  const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [setupUrl, setSetupUrl] = useState("");
+  const [copied, setCopied] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -74,7 +75,7 @@ export default function WorkspaceDialog({
       setShowInviteForm(false);
       setEditingName(false);
       setInviteError("");
-      setInviteSuccess(false);
+      setSetupUrl("");
       setRenameError("");
       setRemoveError("");
     }
@@ -122,18 +123,26 @@ export default function WorkspaceDialog({
     const email = inviteEmail.trim();
     if (!email) return;
     setInviteError("");
-    setInviteSuccess(false);
+    setSetupUrl("");
+    setCopied(false);
     startTransition(async () => {
       const result = await inviteMember(workspace.id, email);
       if (result.error) {
         setInviteError(result.error);
       } else {
-        setInviteSuccess(true);
+        setSetupUrl(result.setupUrl ?? "");
         setInviteEmail("");
         const updated = await getWorkspaceMembers(workspace.id);
         setMembers(updated);
         onMembersChange?.(updated);
       }
+    });
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(setupUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
   };
 
@@ -299,10 +308,24 @@ export default function WorkspaceDialog({
                   </Button>
                 </div>
                 {inviteError && <p className="text-xs text-red-600">{inviteError}</p>}
-                {inviteSuccess && (
-                  <div className="text-xs bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-green-700 font-medium">招待メールを送信しました</p>
-                    <p className="text-gray-500 mt-0.5">ユーザーがメール内のリンクからパスワードを設定してログインできます。</p>
+                {setupUrl && (
+                  <div className="text-xs bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                    <p className="text-green-700 font-medium">アカウントを作成しました</p>
+                    <p className="text-gray-600">以下のURLをユーザーに送ってください。ユーザーがURLを開き、パスワード設定メールを自分で送信できます。</p>
+                    <div className="flex gap-1.5">
+                      <input
+                        readOnly
+                        value={setupUrl}
+                        className="flex-1 text-xs font-mono bg-white border border-green-300 rounded px-2 py-1 text-gray-800 select-all outline-none"
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                      <button
+                        onClick={handleCopy}
+                        className="shrink-0 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                      >
+                        {copied ? "コピー済み" : "コピー"}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <button
@@ -310,7 +333,7 @@ export default function WorkspaceDialog({
                   onClick={() => {
                     setShowInviteForm(false);
                     setInviteError("");
-                    setInviteSuccess(false);
+                    setSetupUrl("");
                   }}
                 >
                   キャンセル
