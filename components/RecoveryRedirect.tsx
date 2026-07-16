@@ -10,9 +10,9 @@ export default function RecoveryRedirect() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // ハッシュベース（type=recovery）
+    // ハッシュベース（type=recovery または type=invite）
     const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
+    if (hash.includes("type=recovery") || hash.includes("type=invite")) {
       router.replace("/invite/accept" + hash);
       return;
     }
