@@ -22,26 +22,28 @@ export async function inviteMember(
   if (!user) return { error: "未ログイン" };
 
   const admin = getAdminClient();
-
-  // 招待メール送信（Supabase Auth）
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://task-app-sooty-one.vercel.app";
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${appUrl}/invite/accept`,
-    data: { name, workspace_id: workspaceId },
+
+  // ユーザーを作成（メール確認済み、仮パスワード）
+  const tempPassword = crypto.randomUUID();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { name, workspace_id: workspaceId },
   });
 
   if (error) return { error: error.message };
 
   const userId = data.user.id;
 
-  // usersテーブルに仮登録（名前はログイン時に上書きされる）
+  // usersテーブルに登録
   const { error: userError } = await admin.from("users").upsert({
     id: userId,
     name: name ?? email.split("@")[0],
     avatar_url: null,
   });
   if (userError) {
-    // ロールバック：auth.usersから削除して宙ぶらりを防ぐ
     await admin.auth.admin.deleteUser(userId);
     return { error: "ユーザー登録に失敗しました。もう一度お試しください。" };
   }
@@ -53,10 +55,19 @@ export async function inviteMember(
     role: "member",
   });
   if (memberError) {
-    // ロールバック：usersテーブルとauth.usersを削除
     await admin.from("users").delete().eq("id", userId);
     await admin.auth.admin.deleteUser(userId);
     return { error: "ワークスペースへの追加に失敗しました。もう一度お試しください。" };
+  }
+
+  // パスワード設定メールを送信（auth/callback経由でinvite/acceptへ）
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appUrl}/auth/callback?next=/invite/accept`,
+  });
+  if (resetError) {
+    await admin.from("users").delete().eq("id", userId);
+    await admin.auth.admin.deleteUser(userId);
+    return { error: "招待メールの送信に失敗しました。もう一度お試しください。" };
   }
 
   return {};
