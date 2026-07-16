@@ -19,12 +19,13 @@ export default function RecoveryRedirect() {
 
     // PKCEコードベース（code + next パラメータ）
     const code = searchParams.get("code");
-    const next = searchParams.get("next") ?? "/invite/accept";
+    const next = searchParams.get("next");
     if (code) {
       const supabase = createClient();
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (!error) {
-          router.replace(next);
+          // nextがある場合はそこへ（パスワードリセット）、ない場合はホームへ（マジックリンク）
+          window.location.href = next ?? "/";
         }
       });
     }

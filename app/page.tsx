@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { type Task, type User, type Group, type Workspace } from "@/lib/types";
 
 // サーバーコンポーネント：認証チェック後にデータを取得してWorkspaceRootに渡す
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   let currentUser: User | null = null;
   let tasks: Task[] = [];
   let users: User[] = [];
@@ -23,7 +23,9 @@ export default async function Home() {
     currentUser = await getCurrentUser();
 
     if (!currentUser) {
-      redirect("/login");
+      const params = await searchParams;
+      const code = params["code"];
+      redirect(code ? `/login?code=${code}` : "/login");
     }
 
     const supabase = await createClient();
