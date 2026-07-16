@@ -15,7 +15,7 @@ function getAdminClient() {
 export async function inviteMember(
   workspaceId: string,
   email: string,
-  name: string
+  name?: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,10 +31,10 @@ export async function inviteMember(
 
   if (error) return { error: error.message };
 
-  // usersテーブルに名前を仮登録（ログイン時に上書きされる）
+  // usersテーブルに仮登録（名前はログイン時に上書きされる）
   const { error: userError } = await admin.from("users").upsert({
     id: data.user.id,
-    name,
+    name: name ?? email.split("@")[0],
     avatar_url: null,
   });
   if (userError) return { error: "ユーザー登録に失敗しました: " + userError.message };
