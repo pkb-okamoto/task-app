@@ -66,10 +66,12 @@ export async function deleteGroup(groupId: string) {
 // グループの並び順を更新
 export async function reorderGroups(groupIds: string[]) {
   const supabase = await createClient();
-  await Promise.all(
+  const results = await Promise.all(
     groupIds.map((id, index) =>
       supabase.from("groups").update({ position: index }).eq("id", id)
     )
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
   revalidatePath("/");
 }

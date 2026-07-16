@@ -31,9 +31,14 @@ export default function DeleteDialog({
 
   const handleDelete = () => {
     startTransition(async () => {
-      await deleteTask(taskId);
-      onOpenChange(false);
-      refresh();
+      try {
+        await deleteTask(taskId);
+        onOpenChange(false);
+        refresh();
+      } catch (e) {
+        alert("削除に失敗しました。もう一度お試しください。");
+        console.error(e);
+      }
     });
   };
 

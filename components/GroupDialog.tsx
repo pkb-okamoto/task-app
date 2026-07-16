@@ -52,12 +52,17 @@ export default function GroupDialog({ open, onOpenChange, group, workspaceId }: 
   const handleSave = () => {
     if (!name.trim()) return;
     startTransition(async () => {
-      if (isEdit && group) {
-        await updateGroup(group.id, { name: name.trim(), color });
-      } else {
-        await createGroup({ name: name.trim(), color, workspace_id: workspaceId ?? null });
+      try {
+        if (isEdit && group) {
+          await updateGroup(group.id, { name: name.trim(), color });
+        } else {
+          await createGroup({ name: name.trim(), color, workspace_id: workspaceId ?? null });
+        }
+        onOpenChange(false);
+      } catch (e) {
+        alert("保存に失敗しました。もう一度お試しください。");
+        console.error(e);
       }
-      onOpenChange(false);
     });
   };
 

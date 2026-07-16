@@ -27,8 +27,11 @@ const PROGRESS_COLORS = ["#6b7280", "#3b82f6", "#22c55e"];
 export default function Dashboard({ tasks, groups, users }: DashboardProps) {
   const rootTasks = tasks.filter((t) => !t.parent_task_id);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
   const stats = useMemo(() => {
     const total = rootTasks.length;

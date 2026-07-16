@@ -262,11 +262,13 @@ export async function updateTaskPositions(
   updates: { id: string; position: number; group_id: string | null; group_status: string }[]
 ) {
   const supabase = await createClient();
-  await Promise.all(
+  const results = await Promise.all(
     updates.map(({ id, position, group_id, group_status }) =>
       supabase.from("tasks").update({ position, group_id, group_status }).eq("id", id)
     )
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
   revalidatePath("/");
 }
 

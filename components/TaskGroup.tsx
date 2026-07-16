@@ -14,6 +14,7 @@ import {
 import TaskRow from "@/components/TaskRow";
 import { groupColorStyles } from "@/components/TaskBadges";
 import { deleteGroup } from "@/lib/actions/groups";
+import { useWorkspace } from "@/lib/workspace-context";
 import { type Group, type Task, type User } from "@/lib/types";
 
 interface TaskGroupProps {
@@ -50,11 +51,13 @@ export default function TaskGroup({
   const [isPending, startTransition] = useTransition();
   const color = groupColorStyles[group.color] ?? groupColorStyles.gray;
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: group.id });
+  const { refresh } = useWorkspace();
 
   const handleDeleteGroup = () => {
     if (!confirm(`「${group.name}」を削除しますか？\nこのグループのタスクはグループなしになります。`)) return;
     startTransition(async () => {
       await deleteGroup(group.id);
+      refresh();
     });
   };
 
@@ -130,7 +133,7 @@ export default function TaskGroup({
             <tbody>
               {tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-6 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="py-6 text-center text-sm text-gray-400">
                     タスクがありません
                   </td>
                 </tr>

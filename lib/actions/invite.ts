@@ -32,18 +32,20 @@ export async function inviteMember(
   if (error) return { error: error.message };
 
   // usersテーブルに名前を仮登録（ログイン時に上書きされる）
-  await admin.from("users").upsert({
+  const { error: userError } = await admin.from("users").upsert({
     id: data.user.id,
     name,
     avatar_url: null,
   });
+  if (userError) return { error: "ユーザー登録に失敗しました: " + userError.message };
 
   // workspace_membersに追加
-  await admin.from("workspace_members").upsert({
+  const { error: memberError } = await admin.from("workspace_members").upsert({
     workspace_id: workspaceId,
     user_id: data.user.id,
     role: "member",
   });
+  if (memberError) return { error: "ワークスペースへの追加に失敗しました: " + memberError.message };
 
   return {};
 }

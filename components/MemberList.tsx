@@ -23,11 +23,11 @@ export default function MemberList({ workspace, allUsers, currentUserId: _curren
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     getUserEmails().then(setEmailMap);
-  }, []);
+  }, [allUsers]);
 
   if (!workspace) return null;
 
@@ -94,8 +94,8 @@ export default function MemberList({ workspace, allUsers, currentUserId: _curren
                 className="text-sm h-9 flex-1 bg-white"
               />
               <Button size="sm" className="h-9 px-4" onClick={handleInvite}
-                disabled={!inviteEmail.trim() || !inviteName.trim()}>
-                送信
+                disabled={isPending || !inviteEmail.trim() || !inviteName.trim()}>
+                {isPending ? "送信中..." : "送信"}
               </Button>
             </div>
             {inviteError && <p className="text-xs text-red-600">{inviteError}</p>}

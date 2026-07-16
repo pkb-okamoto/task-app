@@ -129,39 +129,44 @@ export default function TaskDialog({
     const alertDaysValue = alertDays === "none" ? null : Number(alertDays);
 
     startTransition(async () => {
-      if (isEdit && task) {
-        await updateTask(task.id, {
-          title: title.trim(),
-          group_id: groupId,
-          group_status: selectedGroup?.name ?? "",
-          due_date: dueDate || null,
-          due_time: dueTime || null,
-          progress,
-          notes: notes.trim() || null,
-          priority,
-          alert_days: alertDaysValue,
-        });
-        await setTaskAssignees(task.id, selectedUserIds);
-      } else {
-        const newTaskId = await createTask({
-          title: title.trim(),
-          group_id: groupId,
-          group_status: selectedGroup?.name ?? "",
-          due_date: dueDate || null,
-          due_time: dueTime || null,
-          progress,
-          notes: notes.trim() || null,
-          priority,
-          alert_days: alertDaysValue,
-          parent_task_id: parentTaskId,
-          workspace_id: workspaceId,
-        });
-        if (newTaskId && selectedUserIds.length > 0) {
-          await setTaskAssignees(newTaskId, selectedUserIds);
+      try {
+        if (isEdit && task) {
+          await updateTask(task.id, {
+            title: title.trim(),
+            group_id: groupId,
+            group_status: selectedGroup?.name ?? "",
+            due_date: dueDate || null,
+            due_time: dueTime || null,
+            progress,
+            notes: notes.trim() || null,
+            priority,
+            alert_days: alertDaysValue,
+          });
+          await setTaskAssignees(task.id, selectedUserIds);
+        } else {
+          const newTaskId = await createTask({
+            title: title.trim(),
+            group_id: groupId,
+            group_status: selectedGroup?.name ?? "",
+            due_date: dueDate || null,
+            due_time: dueTime || null,
+            progress,
+            notes: notes.trim() || null,
+            priority,
+            alert_days: alertDaysValue,
+            parent_task_id: parentTaskId,
+            workspace_id: workspaceId,
+          });
+          if (newTaskId && selectedUserIds.length > 0) {
+            await setTaskAssignees(newTaskId, selectedUserIds);
+          }
         }
+        onOpenChange(false);
+        refresh();
+      } catch (e) {
+        alert("保存に失敗しました。もう一度お試しください。");
+        console.error(e);
       }
-      onOpenChange(false);
-      refresh();
     });
   };
 
