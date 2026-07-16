@@ -94,7 +94,8 @@ export default function WorkspaceDialog({
     });
   };
 
-  const handleRemoveMember = (userId: string) => {
+  const handleRemoveMember = (userId: string, userName: string) => {
+    if (!confirm(`「${userName}」をワークスペースから削除しますか？`)) return;
     startTransition(async () => {
       await removeMemberFromWorkspace(workspace.id, userId);
       const updated = await getWorkspaceMembers(workspace.id);
@@ -233,7 +234,7 @@ export default function WorkspaceDialog({
                       {isOwner && m.user_id !== currentUserId && m.role !== "owner" && (
                         <button
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
-                          onClick={() => handleRemoveMember(m.user_id)}
+                          onClick={() => handleRemoveMember(m.user_id, user?.name ?? "このメンバー")}
                           title="削除"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
