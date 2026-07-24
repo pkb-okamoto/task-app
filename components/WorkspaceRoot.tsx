@@ -40,11 +40,28 @@ export default function WorkspaceRoot({
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [allUsers, setAllUsers] = useState<User[]>(users);
+  const [workspaceUserIds, setWorkspaceUserIds] = useState<Set<string>>(new Set());
   const [view, setView] = useState<"board" | "dashboard" | "calendar" | "members">("dashboard");
   const [manageTarget, setManageTarget] = useState<Workspace | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [prefetchedMembers, setPrefetchedMembers] = useState<WorkspaceMember[] | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // ワークスペースメンバーのIDセットを更新
+  const refreshWorkspaceUserIds = useCallback((members: WorkspaceMember[]) => {
+    setWorkspaceUserIds(new Set(members.map((m) => m.user_id)));
+  }, []);
+
+  // ワークスペース変更時にメンバーを取得
+  useEffect(() => {
+    if (!currentWorkspaceId) return;
+    getWorkspaceMembers(currentWorkspaceId).then(refreshWorkspaceUserIds);
+  }, [currentWorkspaceId, refreshWorkspaceUserIds]);
+
+  // 現在のワークスペースのメンバーのみにフィルタリング
+  const workspaceUsers = workspaceUserIds.size > 0
+    ? allUsers.filter((u) => workspaceUserIds.has(u.id))
+    : allUsers;
 
   // ユーザー削除後にallUsersを更新
   const handleUserDeleted = (userId: string) => {
@@ -120,10 +137,13 @@ export default function WorkspaceRoot({
     setDialogOpen(true);
   };
 
-  // ダイアログ内でメンバーが更新されたらキャッシュも更新
+  // ダイアログ内でメンバーが更新されたらキャッシュと担当者リストも更新
   const handleMembersChange = (members: WorkspaceMember[]) => {
     if (manageTarget) {
       membersCache.current.set(manageTarget.id, members);
+      if (manageTarget.id === currentWorkspaceId) {
+        refreshWorkspaceUserIds(members);
+      }
     }
   };
 
@@ -168,7 +188,7 @@ export default function WorkspaceRoot({
             <TaskBoard
               initialTasks={tasks}
               initialGroups={groups}
-              users={allUsers}
+              users={workspaceUsers}
               workspaceId={currentWorkspaceId}
             />
           )}
