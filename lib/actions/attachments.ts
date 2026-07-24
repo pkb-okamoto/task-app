@@ -53,8 +53,18 @@ export async function uploadAttachment(taskId: string, formData: FormData): Prom
 // 添付ファイルを削除
 export async function deleteAttachment(attachmentId: string, filePath: string): Promise<void> {
   const supabase = await createClient();
-  await supabase.storage.from(BUCKET).remove([filePath]);
-  await supabase.from("task_attachments").delete().eq("id", attachmentId);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("未認証");
+
+  const { error: storageError } = await supabase.storage.from(BUCKET).remove([filePath]);
+  if (storageError) throw new Error(storageError.message);
+
+  const { error: dbError } = await supabase
+    .from("task_attachments")
+    .delete()
+    .eq("id", attachmentId)
+    .eq("user_id", user.id);
+  if (dbError) throw new Error(dbError.message);
 }
 
 // 署名付きダウンロードURLを取得（60秒有効）

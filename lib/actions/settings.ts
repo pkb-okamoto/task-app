@@ -41,11 +41,11 @@ export async function updateUserSettings(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  await supabase
+  const { error } = await supabase
     .from("user_settings")
-    .upsert({ user_id: user.id, ...input })
-    .eq("user_id", user.id);
+    .upsert({ user_id: user.id, ...input }, { onConflict: "user_id" });
 
+  if (error) throw new Error(error.message);
   revalidatePath("/");
 }
 

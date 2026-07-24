@@ -92,7 +92,7 @@ export async function upsertCalendarEvent(
         summary: task.title,
         description: task.notes ?? "",
         start: { date: task.due_date },
-        end: { date: task.due_date },
+        end: { date: new Date(new Date(task.due_date).getTime() + 86400000).toISOString().slice(0, 10) },
       };
 
   if (existing?.event_id) {

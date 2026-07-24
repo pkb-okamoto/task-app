@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
     process.env.GOOGLE_REDIRECT_URI
   );
 
-  const { tokens } = await oauth2Client.getToken(code);
+  let tokens;
+  try {
+    ({ tokens } = await oauth2Client.getToken(code));
+  } catch {
+    return NextResponse.redirect(new URL("/?google=error&reason=token_failed", request.url));
+  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

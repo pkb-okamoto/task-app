@@ -67,11 +67,11 @@ export default function BrowserNotification({ currentUser }: BrowserNotification
         for (const task of tasks) {
           const days = daysUntil(task.due_date!);
 
-          // alert_days が設定されている場合はその日数と一致したら通知
+          // alert_days が設定されている場合はその日数以下になったら通知（期限超過も含む）
           // 設定がない場合は3日以内をデフォルト通知
           const shouldNotify = task.alert_days != null
-            ? days === task.alert_days
-            : days >= 0 && days <= 3;
+            ? days <= task.alert_days
+            : days >= -7 && days <= 3;
 
           if (!shouldNotify) continue;
 
@@ -85,7 +85,7 @@ export default function BrowserNotification({ currentUser }: BrowserNotification
 
         const notified = tasks.filter((t) => {
           const days = daysUntil(t.due_date!);
-          return t.alert_days != null ? days === t.alert_days : days >= 0 && days <= 3;
+          return t.alert_days != null ? days <= t.alert_days : days >= -7 && days <= 3;
         }).map((t) => t.id);
 
         if (notified.length > 0) {
